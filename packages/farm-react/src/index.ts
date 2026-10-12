@@ -1,4 +1,5 @@
 import type { FarmRenderer } from "@farm.js/core/renderer";
+import { resolveCompilerOption } from "./compiler-options";
 
 export type ReactCompilerMode = "infer" | "annotation";
 export type ReactCompilerReactivity = "static" | "hybrid";
@@ -23,8 +24,13 @@ export interface ReactCompilerOptions {
 }
 
 export interface ReactRendererOptions {
+  /**
+   * Farm's AOT compiler. `true` enables automatic inference; an object
+   * customizes selection. Unsupported components always stay on React.
+   */
+  compiler?: boolean | ReactCompilerOptions;
   experimental?: {
-    /** `true` enables automatic inference; an object customizes selection. */
+    /** @deprecated Use the top-level `compiler` option. */
     compiler?: boolean | ReactCompilerOptions;
   };
 }
@@ -122,9 +128,9 @@ const REACT_RENDERER: Readonly<FarmRenderer> = Object.freeze({
   },
 });
 
-/** Select React and optionally enable Farm's experimental AOT compiler. */
+/** Select React and optionally enable Farm's AOT compiler. */
 export function react(options: ReactRendererOptions = {}): FarmRenderer {
-  const compiler = options.experimental?.compiler;
+  const compiler = resolveCompilerOption(options, true);
   const normalizedCompiler = compiler ? normalizeReactCompilerOptions(compiler) : false;
 
   return {
@@ -142,7 +148,7 @@ export function react(options: ReactRendererOptions = {}): FarmRenderer {
       functionComponents: true,
     },
     options: {
-      experimental: { compiler: normalizedCompiler },
+      compiler: normalizedCompiler,
     },
   };
 }

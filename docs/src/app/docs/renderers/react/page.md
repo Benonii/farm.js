@@ -1,6 +1,6 @@
 ---
 title: "React Renderer"
-description: "Use FARMJS with the default React renderer, including client hooks, streaming SSR, and the experimental AOT compiler."
+description: "Use FARMJS with the default React renderer, including client hooks, streaming SSR, and the opt-in AOT compiler."
 section: "Core"
 ---
 
@@ -97,9 +97,9 @@ The example creates one store per mounted component; share that instance through
 needed. Do not put request-specific server data in a process-global store. This store does not
 persist data or serialize symbol keys across server/client boundaries.
 
-## Experimental AOT compiler
+## AOT compiler
 
-Farm's experimental React compiler moves a narrow class of local state-update work from React's
+Farm's opt-in React compiler moves a narrow class of local state-update work from React's
 runtime render-and-reconcile path into build-time binding metadata. It is disabled by default and
 only affects the React renderer that enables it. Preact, Solid, Vue, Svelte, and custom renderers do
 not receive this transform.
@@ -130,7 +130,7 @@ unsupported prop shapes keep the full React render path.
 
 ### Enable the compiler
 
-Start from the focused experimental starter when you want the compiler flag, shared dark starter
+Start from the focused compiler starter when you want the compiler option, shared dark starter
 UI, a live AOT-versus-React comparison, and a reproducible browser check already wired together:
 
 ```bash
@@ -152,14 +152,12 @@ import { react } from "@farm.js/react";
 
 export default defineConfig({
   renderer: react({
-    experimental: {
-      compiler: true,
-    },
+    compiler: true,
   }),
 });
 ```
 
-`compiler: true` is the recommended starting point for the experiment. It means automatic
+`compiler: true` is the recommended starting point. It means automatic
 inference with safe React fallback:
 
 ```ts
@@ -170,7 +168,34 @@ compiler: {
 }
 ```
 
-Omitting `experimental.compiler` or setting it to `false` disables the transform.
+Omitting `compiler` or setting it to `false` disables the transform.
+
+### Experimental AOT compiler
+
+Upgrading from the experimental compiler? The option used to live at
+`react({ experimental: { compiler } })`. That form still works as a
+deprecated alias: it logs a one-time deprecation warning and behaves exactly like the top-level
+option. Setting both keys is an error. This migration heading preserves existing links to the
+experimental compiler guide; use the [AOT compiler](#aot-compiler) section for new links.
+
+### Compatibility and release status
+
+`@farm.js/react` is versioned independently from core. A `-beta.N` package version is still a beta;
+moving the configuration option does not by itself publish a stable package. The first stable
+release covers `react({ compiler })`, the documented compiler options, and the public `List`
+component. Inference and annotation mode, hybrid and static reactivity, diagnostics, and reporting
+all remain supported; the advanced options do not require an experimental flag.
+
+The compiler and `@farm.js/react/compiler-runtime` must come from the same installed package
+version. Generated definitions are an implementation protocol, not a cross-version format.
+Rebuild and deploy the complete server and browser output together after upgrading. Do not mix
+cached compiled modules from different package versions. Existing runtime exports remain available;
+applications should normally write React components rather than hand-author generated definitions.
+
+Eligibility and the set of compiled components can evolve between releases. React fallback,
+documented options, and observable application behavior are the compatibility contract, not an
+exact render count, generated helper name, or benchmark score. Unsupported components continue on
+React unless `onUnsupported: "error"` deliberately makes them a build error.
 
 ### Combine the compiler with isolated hydration
 
@@ -186,9 +211,7 @@ import { react } from "@farm.js/react";
 
 export default defineConfig({
   renderer: react({
-    experimental: {
-      compiler: true,
-    },
+    compiler: true,
   }),
   experimental: {
     isolatedClientHydration: "enabled",
@@ -280,12 +303,10 @@ Annotation mode is useful for a staged rollout or a strict, reviewed set of comp
 
 ```ts
 renderer: react({
-  experimental: {
-    compiler: {
-      mode: "annotation",
-      directive: "use compiler",
-      onUnsupported: "warn",
-    },
+  compiler: {
+    mode: "annotation",
+    directive: "use compiler",
+    onUnsupported: "warn",
   },
 }),
 ```
@@ -351,10 +372,8 @@ fallback behavior:
 
 ```ts
 renderer: react({
-  experimental: {
-    compiler: {
-      report: true,
-    },
+  compiler: {
+    report: true,
   },
 }),
 ```
@@ -592,7 +611,7 @@ on React because their final property set or precedence can change.
 
 ### Conditional DOM blocks
 
-This optimization is automatic for components selected by the existing experimental compiler
+This optimization is automatic for components selected by the compiler
 configuration. It does not require a conditional component, a new annotation, or another option.
 The compiler can isolate logical and ternary child structures when their positions are known at
 build time:
@@ -2140,7 +2159,7 @@ function InventoryRow({ item }) {
 
 `List` is an ordinary React component, not compiler-only syntax. It accepts an `Iterable`, `null`,
 or `undefined`; calls `by(item, index)` to create each React key; and requires its child function to
-return one React element. It therefore renders correctly when the experimental compiler is off or
+return one React element. It therefore renders correctly when the compiler is off or
 when this particular use cannot be optimized. The `InventoryRow` example stays in a React-owned
 keyed boundary because a custom component may contain Hooks, events, context, effects, and local
 state. The surrounding compiled component can still avoid executing again. Hooks belong inside a

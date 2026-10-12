@@ -23,6 +23,46 @@ An independently versioned package is not bumped by this command.
 The first stable release moves the shared group from `0.1.0-beta.N` to `0.1.0`. Packages outside
 `bump.config.ts` stay on their own beta line until they are deliberately promoted.
 
+## Independent React compiler stable promotion
+
+`@farm.js/react` is not in the shared Bumpp group. Moving its configuration from
+`experimental.compiler` to `compiler` does not promote its npm version or dist-tags. Keep API
+preparation in a draft PR until these release gates have been recorded on its final commit:
+
+- Document the opt-in defaults, supported options, deprecated alias, React fallback, and the
+  requirement to rebuild server and browser output against one compiler/runtime package version.
+- Run the React package tests and stress suite, type-check, React 18/19 packed compatibility
+  tests, and `test:runtime-size`. Verify the compiler-disabled path as well as enabled builds.
+- Run the maintained production browser example and generated compiler starter. Check hydration,
+  interactions, fallback, and the generated compiler coverage report, not just a successful build.
+- Run generator tests, docs navigation/build checks, and the normal CI matrix on the final head.
+  A prior green commit is not evidence for later changes.
+- Keep unproven performance experiments out of the release. A configuration-only migration must
+  preserve generated code and runtime size; runtime changes need paired correctness-controlled
+  before/after benchmarks.
+
+After building the core, CLI, devtools, React, and create-app packages, run the generated-starter
+gate with `pnpm test:packed-compiler`. It installs the generator and reachable Farm packages from
+local tarballs outside the workspace, type-checks the generated app, and builds and browser-tests
+the unchanged compiler starter with the compiler both enabled and disabled. It does not publish.
+Install the workspace Playwright browser with `pnpm exec playwright install chromium`, or set
+`FARM_EXPERIMENT_BROWSER_PATH` to an existing Chrome/Chromium executable. Screenshots default to
+the system temporary directory as `farm-packed-react-compiler-on.png` and
+`farm-packed-react-compiler-off.png`; `FARM_EXPERIMENT_SCREENSHOT` selects another base filename.
+The existing `pnpm test:packed-app` still checks the basic starter without requiring a browser.
+
+After those gates pass, make the independent version promotion as a dedicated release change,
+not a shared-group bump. Use the versioning tool for the chosen non-prerelease version and run
+`scripts/sync-release-versions.js` so starter dependencies follow the actual React package version.
+Review that only the intended package and its consumers change. Update the stability page's package
+classification when promoting; the default React renderer in core is already stable.
+
+From clean `main`, run `pnpm release:check` and `pnpm publish:dry-run` before publishing. Inspect
+all unpublished public package versions first: `pnpm publish:latest` can publish more than React.
+After publishing, verify the React version and `latest` dist-tag in the registry and install the
+published package into a fresh compiler starter for a production smoke test. Do not describe the
+compiler as released while only the draft PR or a local version change exists.
+
 ## Beta release
 
 ```bash

@@ -12,7 +12,7 @@ export default function HomePage() {
           <div className="eyebrow-row">
             <span>00</span>
             <span>FARMJS / React Compiler starter</span>
-            <span className="experimental-label">Experimental</span>
+            <span className="experimental-label">Opt-in</span>
           </div>
 
           <h1>
@@ -33,7 +33,7 @@ export default function HomePage() {
               <span>02</span>
               <div className="compiler-status">
                 <span className="status-dot" data-enabled={compilerMode} aria-hidden="true" />
-                <code data-compiler-status>experimental.compiler: {compilerMode}</code>
+                <code data-compiler-status>compiler: {compilerMode}</code>
               </div>
             </div>
           </div>
