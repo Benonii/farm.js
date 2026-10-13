@@ -374,6 +374,7 @@ type CompilerRuntimeFeatureName =
   | "keyed-rows-membership"
   | "keyed-rows-map-lookup"
   | "keyed-rows-hinted"
+  | "keyed-rows-append-only"
   | "keyed-rows-position-hinted"
   | "keyed-rows-batch-position-hinted"
   | "keyed-rows-window-position-hinted"
@@ -462,6 +463,7 @@ const COMPILER_RUNTIME_FEATURE_EXPORTS: Record<CompilerRuntimeFeatureName, strin
   "keyed-rows-membership": "keyedRowsMembershipRuntimeFeature",
   "keyed-rows-map-lookup": "keyedRowsMapLookupRuntimeFeature",
   "keyed-rows-hinted": "keyedRowsHintedRuntimeFeature",
+  "keyed-rows-append-only": "keyedRowsAppendOnlyRuntimeFeature",
   "keyed-rows-position-hinted": "keyedRowsPositionHintedRuntimeFeature",
   "keyed-rows-batch-position-hinted": "keyedRowsBatchPositionHintedRuntimeFeature",
   "keyed-rows-window-position-hinted": "keyedRowsWindowPositionHintedRuntimeFeature",
@@ -575,6 +577,7 @@ function runtimeFeaturesForPlans(
   keyedArrayMappedRollingWindowChainHints: boolean,
   keyedArrayRollingWindowHints: boolean,
   keyedMapOrAppendHints: boolean,
+  keyedArrayAppendOnlyHints: boolean,
 ): CompilerRuntimeFeatureName[] {
   const features = new Set<CompilerRuntimeFeatureName>();
   let keyedRowsHaveConditionals = false;
@@ -654,6 +657,15 @@ function runtimeFeaturesForPlans(
                                     ? "-hinted"
                                     : "";
     if (
+      keyedRowsFeature === "keyed-rows" &&
+      hintSuffix === "-hinted" &&
+      keyedTargetKinds.size === 0 &&
+      keyedArrayAppendOnlyHints
+    ) {
+      // Select from accepted rewrites and all keyed plans, not just one list.
+      // The suffix excludes structural hints; opaque updates still reconcile.
+      features.add("keyed-rows-append-only");
+    } else if (
       keyedRowsFeature === "keyed-rows" &&
       hintSuffix === "-filter-hinted" &&
       keyedTargetKinds.size === 1 &&
@@ -10108,6 +10120,7 @@ function compileCandidate(
     appliedMappedRollingWindowChainHints > 0,
     appliedKeyedArrayRollingWindowHints > appliedMappedRollingWindowHints,
     appliedKeyedMapUpdateHints > 0 || appliedKeyedArrayAppendHints > 0,
+    appliedKeyedArrayAppendHints > 0 && appliedKeyedMapUpdateHints === 0,
   );
   markShortCircuitBindings(analysis.bindings || []);
   assignStableBindingTargets(analysis.bindings || []);

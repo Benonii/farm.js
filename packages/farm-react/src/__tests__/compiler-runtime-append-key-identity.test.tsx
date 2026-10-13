@@ -1,14 +1,25 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
-import { createCompiledComponent, createCompilerKeyedArrayAppend } from "../compiler-runtime";
+import {
+  createCompiledComponent,
+  createCompiledComponentWithFeatures,
+  createCompilerKeyedArrayAppend,
+  keyedRowsAppendOnlyRuntimeFeature,
+  type CompiledComponentDefinition,
+} from "../compiler-runtime";
 
 interface Row {
   key: string | number;
   label: string;
 }
 
-describe.each(["static", "hybrid"] as const)("%s append key identity", (reactivity) => {
+describe.each([
+  ["static", false],
+  ["static", true],
+  ["hybrid", false],
+  ["hybrid", true],
+] as const)("%s append key identity (append-only: %s)", (reactivity, appendOnly) => {
   it.each(["committed", "incoming"] as const)(
     "rejects number/string-equivalent %s keys before mutating the owned map",
     async (duplicate) => {
@@ -16,7 +27,11 @@ describe.each(["static", "hybrid"] as const)("%s append key identity", (reactivi
       const initial: Row[] = [{ key: 1, label: "One" }];
       let append!: (rows: Row[]) => void;
       let renders = 0;
-      const Table = createCompiledComponent({
+      const create = appendOnly
+        ? (definition: CompiledComponentDefinition<Record<string, never>>) =>
+            createCompiledComponentWithFeatures(definition, [keyedRowsAppendOnlyRuntimeFeature])
+        : createCompiledComponent;
+      const Table = create({
         displayName: "AppendKeyIdentity",
         reactivity,
         initialize: () => [initial],
