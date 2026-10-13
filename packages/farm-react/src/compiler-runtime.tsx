@@ -3752,6 +3752,11 @@ const COMPILER_KEYED_ROLLING_WINDOW_DELTAS = /* @__PURE__ */ new WeakMap<
   CompilerKeyedRollingWindowDelta
 >();
 
+const COMPILER_KEYED_APPEND_DELTAS = /* @__PURE__ */ new WeakMap<
+  object,
+  readonly CompilerKeyedRowInstance[]
+>();
+
 function keyedRowInstancesByKey(
   instances: readonly CompilerKeyedRowInstance[],
 ): Map<KeyedRowKey, CompilerKeyedRowInstance> {
@@ -7292,13 +7297,14 @@ function reconcileCompilerKeyedArrayAppend(
   const startIndex = compilerKeyedArrayAppendStart(finalValue, collectionToken, instances.size);
   if (startIndex === undefined || !Array.isArray(finalValue)) return undefined;
 
-  const nextInstances = new Map(instances);
+  const appendedKeys = new Set<KeyedRowKey>();
   const appended: CompilerKeyedRowInstance[] = [];
   try {
     for (let index = startIndex; index < finalValue.length; index += 1) {
       const item = finalValue[index];
       const key = keyedRowIdentity(props.rowKey(item, index));
-      if (nextInstances.has(key)) return undefined;
+      if (instances.has(key) || appendedKeys.has(key)) return undefined;
+      appendedKeys.add(key);
       const instance: CompilerKeyedRowInstance = createKeyedRowInstance(
         props,
         root.ownerDocument,
@@ -7307,7 +7313,6 @@ function reconcileCompilerKeyedArrayAppend(
         index,
       );
       appended.push(instance);
-      nextInstances.set(key, instance);
     }
   } catch {
     return undefined;
@@ -7318,7 +7323,12 @@ function reconcileCompilerKeyedArrayAppend(
     for (const instance of appended) fragment.append(instance.element);
     root.append(fragment);
   }
-  return nextInstances;
+  // The block owns this map. Commit only after every new key, descriptor and
+  // binding has been validated, so a rejected append leaves it untouched.
+  const mutableInstances = instances as Map<KeyedRowKey, CompilerKeyedRowInstance>;
+  for (const instance of appended) mutableInstances.set(instance.key, instance);
+  COMPILER_KEYED_APPEND_DELTAS.set(mutableInstances, appended);
+  return mutableInstances;
 }
 
 function reconcileCompilerKeyedArrayStructuralAppend(
@@ -10150,9 +10160,19 @@ function createKeyedRowsBlockComponentCore(
           this.hasReactOwnedRows(),
         );
         if (appendedInstances) {
+          const appended = COMPILER_KEYED_APPEND_DELTAS.get(appendedInstances);
+          COMPILER_KEYED_APPEND_DELTAS.delete(appendedInstances);
           this.instances =
             appendedInstances instanceof Map ? appendedInstances : new Map(appendedInstances);
-          this.rebuildElementIndex(this.instances);
+          if (appended && this.elementIndexComplete) {
+            for (const instance of appended) {
+              this.instancesByElement.set(instance.element, instance);
+            }
+          } else {
+            // Structural append paths and event-ownership changes still need
+            // the complete index; only a validated plain append supplies a delta.
+            this.rebuildElementIndex(this.instances);
+          }
           this.commitCurrentCollection(dirtyState);
           afterCommit?.();
           return;
