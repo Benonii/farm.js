@@ -11249,6 +11249,15 @@ export const keyedRowsFilterHintedRuntimeFeature: CompilerRuntimeFeature = {
   }),
 };
 
+export const keyedRowsFilterOnlyRuntimeFeature: CompilerRuntimeFeature = {
+  name: "keyed-rows:filter-only",
+  create: (owner) => ({
+    KeyedRows: createKeyedRowsBlockComponentCore(owner, {
+      keyedUpdates: keyedFilterOnlyUpdateRuntime,
+    }),
+  }),
+};
+
 export const keyedRowsIdentityFilterHintedRuntimeFeature: CompilerRuntimeFeature = {
   name: "keyed-rows:identity-filter-hinted",
   create: (owner) => ({
