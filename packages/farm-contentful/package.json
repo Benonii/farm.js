@@ -1,6 +1,6 @@
 {
   "name": "@farm.js/contentful",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Contentful content source for Farm.js",
   "license": "MIT",
   "repository": {
