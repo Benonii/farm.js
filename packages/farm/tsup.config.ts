@@ -111,7 +111,7 @@ export const farmPackageBuildOptions = {
     /^@farming-labs\/orm/,
     "@farming-labs/docs",
   ],
-  sourcemap: true,
+  sourcemap: false,
   treeshake: false,
   esbuildOptions(options) {
     options.keepNames = true;
