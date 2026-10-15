@@ -1057,6 +1057,7 @@ export function farmPlugin(
   let middlewareManager: MiddlewareManager;
   let refreshRouteDiscovery: ((reason: string) => Promise<void>) | null = null;
   let workflowHandler: ((request: Request) => Promise<Response | null>) | null = null;
+  let isBuild = false;
   const logUpdate = (tag: "PAGE" | "API" | "MIDDLEWARE" | "TYPE", message: string) => {
     const pc = createCliColors();
     const log = [
@@ -1072,6 +1073,7 @@ export function farmPlugin(
     name: "farm",
 
     config(userConfig, configEnv) {
+      isBuild = configEnv.command === "build";
       const layerAliases = getFarmLayerAliases(options.layers);
       // `@/` resolves to the source directory in development as it does in production
       // builds. An `@` alias in the app's own Vite config wins.
@@ -3209,7 +3211,7 @@ export const manifest = getManifest();
           id,
           transformOptions,
         );
-        const fontCode = typeof fontResult === "string" ? fontResult : fontResult?.code;
+        const fontCode = typeof fontResult === "string" ? fontResult : fontResult?.code?.toString();
         if (fontCode) {
           transformedCode = fontCode;
           transformed = true;
@@ -3357,8 +3359,9 @@ if (import.meta.hot) {
     },
 
     async closeBundle() {
-      // SSG: Pre-render static pages at build time
-      if (!farmApp) return;
+      // SSG: Pre-render static pages at build time. Vite also runs this hook
+      // when a dev server closes, after its SSR module runner has stopped.
+      if (!farmApp || !isBuild) return;
 
       try {
         const routeManager = farmApp.getRouteManager();
