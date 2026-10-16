@@ -1,4 +1,6 @@
+import path from "node:path";
 import { defineConfig, type Options } from "tsup";
+import { restoreDynamicImportsInDirectory } from "./scripts/restore-cjs-dynamic-imports";
 
 const entry = {
   index: "src/index.ts",
@@ -111,13 +113,23 @@ export const farmPackageBuildOptions = {
     "@farming-labs/docs",
   ],
   sourcemap: false,
+  // Share chunks between CommonJS entries as ESM does. Unsplit, every CommonJS
+  // entry inlined its own copy of the modules it imports.
+  splitting: true,
   treeshake: false,
-  esbuildOptions(options) {
+  esbuildOptions(options, { format }) {
     options.keepNames = true;
+    // Split CommonJS is emitted as ESM and converted afterwards, which keeps
+    // import.meta. Give it the empty object esbuild substitutes in CommonJS.
+    if (format === "cjs") options.define = { ...options.define, "import.meta": "{}" };
     return options;
   },
   outExtension({ format }) {
     return { js: format === "cjs" ? ".cjs" : ".mjs" };
+  },
+  // Splitting converts CommonJS dynamic imports to require(); restore import().
+  async onSuccess() {
+    await restoreDynamicImportsInDirectory(path.join(process.cwd(), "dist"));
   },
 } satisfies Options;
 
