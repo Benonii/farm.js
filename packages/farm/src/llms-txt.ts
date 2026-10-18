@@ -311,6 +311,16 @@ export function createFarmLlmsMarkdownReader(
 }
 
 /**
+ * How long llms-full.txt waits for one page's Markdown. Farm has no per-render
+ * timeout to reuse, so this is a conservative bound: a page that never finishes
+ * is left out instead of holding the response, and the shared render queue,
+ * open forever.
+ */
+export const FARM_LLMS_FULL_PAGE_TIMEOUT_MS = 30_000;
+
+const LLMS_PAGE_TIMED_OUT = Symbol("farm.llms.pageTimedOut");
+
+/**
  * Renders llms-full.txt: the llms.txt header, then one block per linked page with
  * its Markdown inlined, in the layout the docs engine uses. A string passes
  * through unchanged. Only same-origin links are fetched.
@@ -321,6 +331,10 @@ export async function renderFarmLlmsFullTxt(
     origin: string;
     readMarkdown: (url: string) => Promise<string | null>;
     concurrency?: number;
+    /** Milliseconds to wait for one page's Markdown before leaving it out. */
+    pageTimeout?: number;
+    /** Called when a page is left out because it did not answer in time. */
+    onIncomplete?: () => void;
   },
 ): Promise<string> {
   // Validates the value, and returns strings unchanged apart from the final newline.
@@ -338,8 +352,24 @@ export async function renderFarmLlmsFullTxt(
     }
   }
 
+  const pageTimeout = options.pageTimeout ?? FARM_LLMS_FULL_PAGE_TIMEOUT_MS;
+  const readWithinTimeout = async (url: string) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<typeof LLMS_PAGE_TIMED_OUT>((resolve) => {
+      timer = setTimeout(resolve, pageTimeout, LLMS_PAGE_TIMED_OUT);
+    });
+    try {
+      const content = await Promise.race([options.readMarkdown(url), timedOut]);
+      if (content !== LLMS_PAGE_TIMED_OUT) return content;
+      // Listed without its content, like a page that needs sign-in.
+      options.onIncomplete?.();
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
   const contents = await mapWithConcurrency(links, options.concurrency ?? 4, (link) =>
-    shouldInlineLlmsLink(link.url, options.origin) ? options.readMarkdown(link.url) : null,
+    shouldInlineLlmsLink(link.url, options.origin) ? readWithinTimeout(link.url) : null,
   );
 
   const blocks = [`# ${toSingleLine(llms.title)}`];
@@ -362,38 +392,62 @@ export async function renderFarmLlmsFullTxt(
  * that result; renders run one at a time, so a burst of requests, even with
  * varied Host headers, cannot multiply page renders. The content is the same for
  * every caller: pages are read with fresh requests that carry no credentials.
+ * A render that calls `incomplete()`, because a page timed out, is answered but
+ * not reused, so the next request tries that page again.
  */
 export function createFarmLlmsFullRenderer(
   options: { revalidate?: number; now?: () => number; maxEntries?: number } = {},
-): (origin: string, render: () => Promise<string>) => Promise<string> {
+): (
+  origin: string,
+  render: (shared: { incomplete: () => void }) => Promise<string>,
+  onSettled?: (complete: boolean) => void,
+) => Promise<string> {
   const now = options.now ?? Date.now;
   const ttl = (options.revalidate ?? 0) * 1000;
   const maxEntries = options.maxEntries ?? 16;
-  const entries = new Map<string, { body: Promise<string>; expires: number }>();
+  const entries = new Map<
+    string,
+    { body: Promise<string>; expires: number; complete: () => boolean }
+  >();
   let queue: Promise<unknown> = Promise.resolve();
 
-  return (origin, render) => {
+  // Callers learn whether the body they get is complete, including callers
+  // that joined another request's render, so a partial body is not cached.
+  const settle = (
+    body: Promise<string>,
+    complete: () => boolean,
+    onSettled?: (c: boolean) => void,
+  ) => (onSettled ? body.then((value) => (onSettled(complete()), value)) : body);
+
+  return (origin, render, onSettled) => {
     const entry = entries.get(origin);
-    if (entry && entry.expires > now()) return entry.body;
+    if (entry && entry.expires > now()) return settle(entry.body, entry.complete, onSettled);
     entries.delete(origin);
 
-    const body = queue.then(render);
+    let complete = true;
+    const body = queue.then(() =>
+      render({
+        incomplete: () => {
+          complete = false;
+        },
+      }),
+    );
     queue = body.catch(() => {});
-    const pending = { body, expires: Number.POSITIVE_INFINITY };
+    const pending = { body, expires: Number.POSITIVE_INFINITY, complete: () => complete };
     entries.set(origin, pending);
     // Map order is insertion order, so the first key is the oldest entry.
     if (entries.size > maxEntries) entries.delete(entries.keys().next().value!);
     body.then(
       () => {
         if (entries.get(origin) !== pending) return;
-        if (ttl > 0) pending.expires = now() + ttl;
+        if (ttl > 0 && complete) pending.expires = now() + ttl;
         else entries.delete(origin);
       },
       () => {
         if (entries.get(origin) === pending) entries.delete(origin);
       },
     );
-    return body;
+    return settle(body, pending.complete, onSettled);
   };
 }
 

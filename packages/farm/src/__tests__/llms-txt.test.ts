@@ -544,6 +544,93 @@ describe("createFarmLlmsFullRenderer", () => {
     expect(await shared("https://a.test", async () => "ok")).toBe("ok");
   });
 
+  it("leaves out a page that never finishes, frees the queue, and does not reuse the result", async () => {
+    vi.useFakeTimers();
+    try {
+      const shared = createFarmLlmsFullRenderer({ revalidate: 60 });
+      const index = {
+        title: "Acme",
+        sections: [
+          {
+            title: "Docs",
+            links: [
+              { title: "Stuck", url: "https://a.test/stuck.md" },
+              { title: "Pricing", url: "https://a.test/pricing.md" },
+            ],
+          },
+        ],
+      };
+      let stuck = true;
+      const readMarkdown = vi.fn((url: string) =>
+        url.endsWith("/stuck.md") && stuck
+          ? new Promise<string | null>(() => {})
+          : Promise.resolve(`# ${url.endsWith("/stuck.md") ? "Stuck" : "Pricing"}\n`),
+      );
+      const render = (shared?: { incomplete: () => void }) =>
+        renderFarmLlmsFullTxt(index, {
+          origin: "https://a.test",
+          readMarkdown,
+          onIncomplete: shared?.incomplete,
+        });
+
+      const settled: string[] = [];
+      const completeness: Array<[string, boolean]> = [];
+      const first = shared("https://a.test", render, (complete) =>
+        completeness.push(["first", complete]),
+      ).then((body) => {
+        settled.push("a");
+        return body;
+      });
+      // A request that joins the in-flight render learns it is partial too.
+      const joined = shared("https://a.test", render, (complete) =>
+        completeness.push(["joined", complete]),
+      );
+      // Another origin waits behind the stuck render.
+      const other = shared("https://b.test", async () => "b").then((body) => {
+        settled.push("b");
+        return body;
+      });
+      await vi.advanceTimersByTimeAsync(29_999);
+      expect(settled).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toEqual(["a", "b"]);
+
+      const body = await first;
+      expect(await joined).toBe(body);
+      expect(completeness).toEqual([
+        ["first", false],
+        ["joined", false],
+      ]);
+      expect(body).toContain("## Stuck\n\nURL: https://a.test/stuck.md\n\n---");
+      expect(body).toContain("# Pricing");
+      expect(await other).toBe("b");
+
+      // The timed-out render is not reused: the next request reads the page again.
+      stuck = false;
+      let secondComplete: boolean | undefined;
+      const second = await shared("https://a.test", render, (complete) => {
+        secondComplete = complete;
+      });
+      expect(secondComplete).toBe(true);
+      expect(second).toContain("URL: https://a.test/stuck.md\n\n# Stuck");
+      expect(readMarkdown.mock.calls.filter(([url]) => url.endsWith("/stuck.md"))).toHaveLength(2);
+      // A complete render is reused for revalidate seconds.
+      let cachedComplete: boolean | undefined;
+      expect(
+        await shared(
+          "https://a.test",
+          async () => "new",
+          (complete) => {
+            cachedComplete = complete;
+          },
+        ),
+      ).toBe(second);
+      expect(cachedComplete).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps a bounded number of origins", async () => {
     const shared = createFarmLlmsFullRenderer({ revalidate: 60, maxEntries: 2 });
     await shared("https://a.test", async () => "a");
