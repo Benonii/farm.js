@@ -213,6 +213,11 @@ Farm returns the same markdown representation with `Content-Type: text/markdown`
 document head, while ordinary browser requests continue to receive HTML. Set
 `metadata.alternates.types["text/markdown"]` to point the head link somewhere else.
 
+Mirrors preserve the page response's `Set-Cookie` headers, including on redirects, sign-in errors,
+partial views, `HEAD`, and conditional `304` responses. A mirror that sets cookies uses
+`Cache-Control: private, no-store`, even when `md.cache` is enabled, so a shared cache cannot replay
+one reader's session cookies to another. Cookie-free mirrors keep their configured cache policy.
+
 Prerendered pages, such as those exporting `dynamic = "force-static"`, are served as static files in
 production, so they answer every request with HTML. They still send the `Link` header, and their
 `.md` URL works, so agents should follow the header or request the `.md` URL directly.
@@ -333,13 +338,17 @@ at its `.md` URL and to `Accept: text/markdown`, with `?outline`, `?section`, `?
 fire `agent.read` events. The mirror renders the page through the normal request path, so middleware
 and sign-in gates apply, and a page that must not be shared keeps its private `Cache-Control`.
 
+The RSC renderer currently sets a deployment cookie on HTML page renders. Its generated mirrors
+therefore use `private, no-store` too; setting `md.cache` does not enable shared caching while that
+cookie is present. This prevents caches from replaying response cookies to another reader.
+
 Set the same `md` options on the RSC config:
 
 ```ts title="vite.config.ts"
 import { defineConfig } from "@farm.js/plugin/rsc";
 
 export default defineConfig({
-  md: { expose: ["/", "/pricing", "/docs/[...slug]"], cache: 300 },
+  md: { expose: ["/", "/pricing", "/docs/[...slug]"] },
 });
 ```
 
