@@ -1,6 +1,6 @@
 {
   "name": "@farm.js/sanity",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "description": "Sanity CMS integration for Farm.js",
   "license": "MIT",
   "repository": {
