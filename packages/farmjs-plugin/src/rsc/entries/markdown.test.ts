@@ -61,6 +61,63 @@ function createHandler(markdownConfig = resolveMarkdownConfig(undefined)) {
 }
 
 describe("RSC Markdown mirrors", () => {
+  it.each([204, 205, 304])(
+    "retains bodyless HTML %s responses without conversion or retry",
+    async (status) => {
+      for (const pathname of ["/pricing.md", "/pricing"]) {
+        for (const method of ["GET", "HEAD"]) {
+          const { run, handleFarmRequest } = createHandler();
+          const page = new Response(null, {
+            status,
+            headers: { "content-type": "text/html", etag: '"page"' },
+          });
+          handleFarmRequest.mockResolvedValue(page);
+          const response = await run(
+            new Request(`https://farm.test${pathname}?outline`, {
+              method,
+              headers: { accept: "text/markdown" },
+            }),
+          );
+          expect(response).toBe(page);
+          expect(response.body).toBeNull();
+          expect(response.headers.get("etag")).toBe('"page"');
+          expect(handleFarmRequest).toHaveBeenCalledOnce();
+        }
+      }
+    },
+  );
+
+  it.each(["/pricing.md", "/pricing"])(
+    "does not retry rate-limited middleware at %s",
+    async (pathname) => {
+      const limited = vi.fn(
+        () =>
+          new Response("Slow down", {
+            status: 429,
+            headers: { "retry-after": "60", "cache-control": "no-store" },
+          }),
+      );
+      const runner = createProductionMiddlewareRunner({
+        modules: [{ path: "/pricing", module: { default: limited } }],
+      });
+      const { run, handleFarmRequest } = createHandler();
+      handleFarmRequest.mockImplementation(async (request: Request) => {
+        const result = await runner(request);
+        return result.response ?? new Response("Not Found", { status: 404 });
+      });
+      const response = await run(
+        new Request(`https://farm.test${pathname}`, {
+          headers: { accept: "text/markdown" },
+        }),
+      );
+      expect(response.status).toBe(429);
+      expect(response.headers.get("retry-after")).toBe("60");
+      expect(await response.text()).toBe("Slow down");
+      expect(limited).toHaveBeenCalledOnce();
+      expect(handleFarmRequest).toHaveBeenCalledOnce();
+    },
+  );
+
   it("preserves middleware cookies in the published core runtime", async () => {
     const runner = createProductionMiddlewareRunner({
       modules: [

@@ -186,6 +186,12 @@ export async function createMarkdownMirrorResponse(
     }),
   );
 
+  // These statuses cannot carry a representation, even with an HTML content
+  // type. Preserve the terminal response before conversion or view selection.
+  if (pageResponse.status === 204 || pageResponse.status === 205 || pageResponse.status === 304) {
+    return pageResponse;
+  }
+
   // A redirect is answered as a redirect even when it carries an HTML body, as
   // the development renderer's redirects do.
   const redirects =
@@ -194,12 +200,28 @@ export async function createMarkdownMirrorResponse(
     // A page behind sign-in redirects or answers 401/403 without HTML. Say so in
     // Markdown with the same status, rather than falling through to a 404 that
     // tells the agent the page does not exist.
-    return createMarkdownAccessResponse(
+    const accessResponse = createMarkdownAccessResponse(
       pageResponse,
       target.pathname,
       pageUrl,
       options.request.method === "HEAD",
     );
+    if (accessResponse || options.request.method === "HEAD") {
+      // The replacement has no use for the original body. Cancellation must not
+      // delay headers (a streaming source can take arbitrarily long to settle).
+      void pageResponse.body?.cancel().catch(() => {});
+      return (
+        accessResponse ??
+        new Response(null, {
+          status: pageResponse.status,
+          statusText: pageResponse.statusText,
+          headers: pageResponse.headers,
+        })
+      );
+    }
+    // Rendering already handled this request. Returning null would ask the
+    // caller to dispatch again, losing errors such as 429 at an explicit .md URL.
+    return pageResponse;
   }
 
   const html = await pageResponse.text();
