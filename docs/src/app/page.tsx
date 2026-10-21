@@ -77,9 +77,9 @@ import { farmBenchmark, formatBenchmarkDuration } from "../lib/framework-benchma
 import { BlogFigure } from "../components/blog/figures";
 import "../components/blog/figures.css";
 
-const homepageTitle = "Farm.js - Framework for modern integrated apps";
+const homepageTitle = "Farm.js - The framework for the web and agents";
 const homepageDescription =
-  "Farm.js is the framework for modern integrated apps, unifying routing, typed APIs, middleware, integrations, docs, and deployment.";
+  "Farm.js is the full-stack framework for the web and agents: apps are agent-ready by default and run any agent runtime you bring. Built on Vite and Nitro.";
 
 export const metadata = {
   metadataBase: "https://farmjs.dev",

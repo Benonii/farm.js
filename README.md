@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <strong>A framework for building fast, full-stack, product-integrated applications.</strong>
+  <strong>The framework for the web and agents.</strong>
 </p>
 
 <p align="center">
-  Farm.js combines Vite's instant development experience with typed app-directory routing, secure Server Actions, streaming SSR, and production-ready deployment output. React is the default renderer, and beta Preact, Solid, Vue, and Svelte adapters use the same routing and server contracts. See <a href="https://farmjs.dev/docs/stability">Stability and Support</a> for what 0.1 covers.
+  Every Farm.js app serves its pages to people and to AI agents: server-rendered HTML, a Markdown copy of each page, and <code>llms.txt</code>, on by default. Turn on MCP and your server functions become tools agents can call. Bring any agent runtime: <a href="https://farmjs.dev/docs/integrations/eve">Eve</a> and <a href="https://farmjs.dev/docs/integrations/cf-agent">Cloudflare Agents</a> plug in through Farm's open <a href="https://farmjs.dev/docs/integrations#agent-runtimes">agent runtime contract</a>, and the <a href="https://farmjs.dev/docs/integrations/agent-frameworks">AI SDK, Mastra, LangGraph, and the OpenAI Agents SDK</a> run in a plain API route. Built on Vite and Nitro, with typed routes, Server Actions, and streaming SSR. React is the default renderer, and beta Preact, Solid, Vue, and Svelte adapters use the same routing and server contracts. See <a href="https://farmjs.dev/docs/stability">Stability and Support</a> for what 0.1 covers.
 </p>
 
 <p align="center">

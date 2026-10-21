@@ -3,7 +3,7 @@ import { devtools } from "@farm.js/devtools";
 import { farmDocsRuntimeAdapter } from "@farming-labs/farmjs/runtime";
 
 const siteDescription =
-  "Farm.js is the framework for modern integrated apps, unifying routing, typed APIs, middleware, integrations, docs, and deployment.";
+  "Farm.js is the full-stack framework for the web and agents: apps are agent-ready by default and run any agent runtime you bring. Built on Vite and Nitro.";
 
 export default defineConfig({
   plugins: [devtools()],
