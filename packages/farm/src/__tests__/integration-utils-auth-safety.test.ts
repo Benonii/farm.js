@@ -158,3 +158,35 @@ describe("integration request-cookie serialization", () => {
     expect(header).not.toContain("Secure");
   });
 });
+
+describe("integration Set-Cookie attributes browsers require", () => {
+  const http = new Request("http://app.example.com/auth/callback");
+  const https = new Request("https://app.example.com/auth/callback");
+
+  it("applies the __Host- and __Secure- prefix rules", () => {
+    const host = createRequestCookie("__Host-sid", "v", http, {
+      path: "/auth",
+      domain: "example.com",
+    });
+    expect(host).toContain("Path=/;");
+    expect(host).not.toContain("Domain=");
+    expect(host).toContain("; Secure");
+    expect(clearRequestCookie("__Host-sid", http, { path: "/auth" })).toContain("; Secure");
+
+    expect(createRequestCookie("__Secure-sid", "v", http, { secure: false })).toContain("; Secure");
+  });
+
+  it("marks cookies Secure behind a TLS-terminating proxy", () => {
+    const proxied = new Request("http://10.0.0.5:3000/auth/callback", {
+      headers: { "x-forwarded-proto": "https, http" },
+    });
+    expect(createRequestCookie("sid", "v", proxied)).toContain("; Secure");
+    expect(createRequestCookie("sid", "v", http)).not.toContain("Secure");
+    expect(createRequestCookie("sid", "v", https)).toContain("; Secure");
+  });
+
+  it("encodes the name and rejects a non-finite maxAge", () => {
+    expect(createRequestCookie("a;b", "v", https)).toMatch(/^a%3Bb=v;/);
+    expect(() => createRequestCookie("sid", "v", https, { maxAge: Number.NaN })).toThrow(TypeError);
+  });
+});
