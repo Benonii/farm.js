@@ -3427,7 +3427,7 @@ async function loadRouteComponent(route) {
   return route.Component;
 }
 
-async function createMatchedHydrationRoute(matched, pathname, searchParams, serverHtml) {
+async function createMatchedHydrationRoute(matched, pathname, searchParams, serverHtml, serverProps) {
   const hydrateLayouts = hasHydratableLayout(pathname);
   const params = matched.params;
   let pageElement = null;
@@ -3435,15 +3435,30 @@ async function createMatchedHydrationRoute(matched, pathname, searchParams, serv
   if (matched.route.pageShouldHydrate) {
     const Component = await loadRouteComponent(matched.route);
     if (!Component) return null;
-    if (typeof Component === "function" && Component.constructor && Component.constructor.name === "AsyncFunction") {
+    // A programmatic page whose guard and data run only on the server renders
+    // from the props the server resolved for this document. Without them (a
+    // rejected guard, deferred data) its server-rendered HTML is kept.
+    if (Component.__farmServerProps === true) {
+      if (!serverProps || serverProps.__farmRoutePropsResolved !== true) return null;
+      const middleware = serverProps.middleware;
+      const props = {
+        ...serverProps,
+        ...(middleware && middleware.data && !(middleware.data instanceof Map)
+          ? { middleware: { ...middleware, data: new Map(Object.entries(middleware.data)) } }
+          : {}),
+        searchParams: Promise.resolve(serverProps.search ?? searchParams),
+      };
+      pageElement = React.createElement(Component, props);
+    } else if (typeof Component === "function" && Component.constructor && Component.constructor.name === "AsyncFunction") {
       console.warn(
         "[Farm.js] Skipping hydration for " + pathname +
         ": async server components cannot run in the browser. Server-rendered HTML is preserved."
       );
       return null;
+    } else {
+      const props = { params: params, searchParams: Promise.resolve(searchParams) };
+      pageElement = React.createElement(Component, props);
     }
-    const props = { params: params, searchParams: Promise.resolve(searchParams) };
-    pageElement = React.createElement(Component, props);
   } else if (hydrateLayouts) {
     const serverPage = document.getElementById("__farm_page__");
     pageElement = createLayoutPageBoundary(
@@ -3516,6 +3531,32 @@ function findClientRouteSlot(slot) {
       candidate.interception === slot.interception &&
       candidate.fallback === slot.fallback;
   });
+}
+
+/**
+ * The page props a fetched document embeds in its bootstrap script, which a
+ * client navigation does not execute. The JSON ends at the first statement
+ * boundary where it parses, so the separator inside a string cannot cut it.
+ */
+function readPagePropsPayload(doc) {
+  const prefix = "window.__FARM_PROPS__=";
+  const separator = ";window.__FARM_INTEGRATION_API_MANIFEST__=";
+  for (const script of doc.querySelectorAll("script:not([src])")) {
+    const source = script.textContent || "";
+    if (!source.startsWith(prefix)) continue;
+    for (
+      let end = source.indexOf(separator, prefix.length);
+      end !== -1;
+      end = source.indexOf(separator, end + 1)
+    ) {
+      try {
+        return JSON.parse(source.slice(prefix.length, end));
+      } catch {
+        // The separator was inside a string value; try the next one.
+      }
+    }
+  }
+  return undefined;
 }
 
 function readRouteSlotPayload(doc) {
@@ -3718,6 +3759,8 @@ async function hydrate() {
           matched,
           pathname,
           searchParams,
+          undefined,
+          window.__FARM_PROPS__,
         );
         if (!routeState) return;
         const shouldHydrate = !isHydrated && Boolean(container.innerHTML.trim());
@@ -4069,6 +4112,7 @@ ${generateUniversalRouterStateProperties()}
     if (isFarmLocaleDocumentChange(doc)) return false;
     if (doc.getElementById("nd-docs-layout")) return false;
     const nextRouteSlots = readRouteSlotPayload(doc);
+    const nextPageProps = readPagePropsPayload(doc);
     const isNavigationCurrent = () =>
       this.isCurrentNavigation(navigation, clientNavigation);
     
@@ -4099,6 +4143,7 @@ ${generateUniversalRouterStateProperties()}
         newPathname,
         searchParams,
         nextPage ? nextPage.innerHTML : "",
+        nextPageProps,
       );
       if (!isNavigationCurrent()) return false;
       if (routeState) {
@@ -4134,6 +4179,8 @@ ${generateUniversalRouterStateProperties()}
         matched,
         newPathname,
         searchParams,
+        undefined,
+        nextPageProps,
       );
       if (!isNavigationCurrent()) return false;
       if (routeState) {
@@ -7775,6 +7822,12 @@ function getPPRHeaders(status, config) {
   return headers;
 }
 
+function hasFarmUnserializableRouteData(data) {
+  const isPromise = (value) => Boolean(value) && typeof value.then === "function";
+  if (isPromise(data)) return true;
+  return Boolean(data) && typeof data === "object" && Object.values(data).some(isPromise);
+}
+
 function getRouteSharedCacheControl(route, pprCanCache) {
   if (!route || !route.module) {
     return null;
@@ -8513,7 +8566,9 @@ async function handleFarmRequestInContext(
           ...(pageProps.__farmCanonicalPath
             ? { __farmCanonicalPath: pageProps.__farmCanonicalPath }
             : {}),
-          ...(pageProps.__farmRoutePropsResolved
+          // Deferred values do not survive JSON, so the browser cannot render
+          // a page from these props while one is still in flight.
+          ...(pageProps.__farmRoutePropsResolved && !hasFarmUnserializableRouteData(pageProps.data)
             ? { __farmRoutePropsResolved: true }
             : {}),
           path: pathname,
