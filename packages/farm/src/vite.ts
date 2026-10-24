@@ -157,6 +157,7 @@ import { isFarmDocsClientConfigModule, redactFarmDocsClientConfig } from "./docs
 import { resolveFarmDocsFontAssets, toFarmDocsPublicFontAssets } from "./docs/fonts";
 import {
   createFarmNodeRequestAbortSignal,
+  createFarmNodeRequestBodyStream,
   createFarmRequestBodyErrorResponse,
   readNodeRequestBody,
   resolveFarmServerConfig,
@@ -2060,7 +2061,13 @@ window.__FARM_MANIFEST__ = ${inlineValue({
               method: requestMethod,
               headers: docsHeaders,
             });
-            const docsResponse = await farmDocsHandler(docsRequest.clone());
+            // The docs handler gets the body (MCP, feedback, AI) as in production. It is read
+            // lazily, so a path the docs runtime declines keeps its body for the app's routes.
+            const docsBodyInit: RequestInit & { duplex?: "half" } =
+              requestMethod === "GET" || requestMethod === "HEAD"
+                ? {}
+                : { body: createFarmNodeRequestBodyStream(req), duplex: "half" };
+            const docsResponse = await farmDocsHandler(new Request(docsRequest, docsBodyInit));
             if (docsResponse) {
               if (await runAppMiddlewareForContentRoute()) return;
               await sendWebResponse(
