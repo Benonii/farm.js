@@ -213,9 +213,12 @@ Matchers can be strings, regular expressions, or functions. String matchers supp
 | ---------------------- | ---------------------------------------------------------------- |
 | `/dashboard/:path*`    | `/dashboard`, `/dashboard/settings`, `/dashboard/reports/weekly` |
 | `/dashboard/[section]` | `/dashboard/settings` with `ctx.params.section === "settings"`   |
+| `/team/:id?`           | `/team` and `/team/42`, but not `/team/42/edit`                  |
 | `/docs/[...slug]`      | `/docs`, `/docs/getting-started`, nested docs paths              |
+| `/docs/[[...slug]]`    | `/docs`, `/docs/getting-started`, nested docs paths              |
 | `/api/**`              | Every nested path below `/api`                                   |
 | `/api/*`               | One segment below `/api`                                         |
+| `/admin*`              | `/admin`, `/admin-panel`, but not `/admin/users`                 |
 | `/auth(.*)`            | `/auth` and nested auth paths                                    |
 
 Matchers are compared against the same pathname the router resolves the request
