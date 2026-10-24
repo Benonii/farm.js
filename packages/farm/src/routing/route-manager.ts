@@ -47,6 +47,7 @@ import {
   getClientModuleHydrationPlan,
   createMarkdownPageHydrationPlanner,
   getFarmClientHydrationPlanOptions,
+  usesFarmServerTree,
   getClientModuleMetadata,
   resolveFarmIsolatedClientHydrationMode,
   type IsolatedClientBoundaryReference,
@@ -160,6 +161,8 @@ export interface FarmClientRouteManifest {
     islandStrategy: FarmIslandStrategy | null;
     hasIsolatedClientBoundaries?: true;
     isolatedBoundaries?: IsolatedClientBoundaryReference[];
+    /** The async page renders as a server tree inside its hydrating layout's root. */
+    serverTree?: true;
     renderPlan: FarmRouteRenderPlan;
     suppressedAsyncHydration?: true;
     /** Why an async page's client components could not become islands. */
@@ -806,6 +809,7 @@ export class RouteManager {
               })),
             }
           : {}),
+        ...(usesFarmServerTree(metadata) ? { serverTree: true as const } : {}),
         renderPlan: createFarmRouteRenderPlan({
           pageShouldHydrate: metadata.shouldHydrate,
           layoutShouldHydrate,
