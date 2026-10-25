@@ -94,6 +94,15 @@ export class APIRouteManager {
     this.dispatch = options.dispatch;
   }
 
+  /** Every file the current handlers were loaded from: route files and root routes files. */
+  getSourceFiles(): Set<string> {
+    const files = new Set<string>();
+    for (const sources of this.endpointSources.values()) {
+      for (const { filePath } of sources.values()) files.add(filePath);
+    }
+    return files;
+  }
+
   /**
    * Discover route.ts files in /app/api and explicit endpoints in root routes.ts
    */
