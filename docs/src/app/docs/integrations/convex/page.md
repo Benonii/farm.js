@@ -378,8 +378,21 @@ export default defineConfig({
 | `SITE_URL`           | Convex                       | Your app's URL, for Better Auth's `baseURL`.                                         |
 | `FARM_CONVEX_SECRET` | Farm and Convex              | Shared secret for the rate-limit and KV functions.                                   |
 
-On Vercel, `npx convex deploy --cmd 'pnpm build' --cmd-url-env-var-name CONVEX_URL` pushes your
-functions and builds the app with the production URL in one step.
+## Deploy
+
+`farm build` only builds the app. It never pushes Convex functions, so a local or CI build can't
+change your production backend. Use `convex deploy` as the build command instead:
+
+```bash
+npx convex deploy --cmd 'pnpm build' --cmd-url-env-var-name CONVEX_URL
+```
+
+It pushes your functions, then builds the app against the same deployment, so the site never ships
+pointing at an older backend. It needs `CONVEX_DEPLOY_KEY` in the build environment. On Vercel, set
+this as the project's build command.
+
+`convex deploy` sets `CONVEX_URL` only while the build runs. The Farm server reads it again when it
+starts, so also set `CONVEX_URL` in your host's runtime environment.
 
 ## Limits
 
