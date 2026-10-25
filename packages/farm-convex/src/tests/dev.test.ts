@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { resolveDevOptions, startConvexDev, stopConvexDev } from "../dev.js";
+import { isDeploymentChosen, resolveDevOptions, startConvexDev, stopConvexDev } from "../dev.js";
 
 import type { ConvexDevState } from "../types.js";
 
 const FAKE_CONVEX = `#!/bin/sh
 echo "$@" > "$(dirname "$0")/../../arguments.txt"
+echo "Convex functions ready!"
+echo "function failed" >&2
 trap 'echo stopped > "$(dirname "$0")/../../stopped.txt"; exit 0' INT
 while true; do sleep 0.05; done
 `;
@@ -46,6 +48,24 @@ describe("resolveDevOptions", () => {
   });
 });
 
+describe("isDeploymentChosen", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("waits for a deployment before labelling output, so first-run questions keep the terminal", () => {
+    vi.stubEnv("CONVEX_DEPLOYMENT", "");
+    vi.stubEnv("CONVEX_AGENT_MODE", "");
+    const root = mkdtempSync(path.join(tmpdir(), "farm-convex-env-"));
+    expect(isDeploymentChosen(root)).toBe(false);
+    writeFileSync(path.join(root, ".env.local"), "CONVEX_DEPLOYMENT=dev:superb-impala-637\n");
+    expect(isDeploymentChosen(root)).toBe(true);
+  });
+
+  it("treats a deployment from the environment as chosen", () => {
+    vi.stubEnv("CONVEX_AGENT_MODE", "anonymous");
+    expect(isDeploymentChosen(mkdtempSync(path.join(tmpdir(), "farm-convex-env-")))).toBe(true);
+  });
+});
+
 describe.skipIf(process.platform === "win32")("convex dev runner", () => {
   const state: ConvexDevState = {};
 
@@ -60,6 +80,23 @@ describe.skipIf(process.platform === "win32")("convex dev runner", () => {
     stopConvexDev(state);
     await waitFor(() => readTextFile(path.join(root, "stopped.txt")).trim() === "stopped");
     expect(state.child).toBeUndefined();
+  });
+
+  it("labels each line convex prints once a deployment is chosen", async () => {
+    const root = createAppWithFakeConvex();
+    writeFileSync(path.join(root, ".env.local"), "CONVEX_DEPLOYMENT=dev:superb-impala-637\n");
+    const printed: string[] = [];
+    const record = (chunk: string | Uint8Array) => printed.push(String(chunk)) > 0;
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(record);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(record);
+    startConvexDev(root, {}, state);
+    await waitFor(() => printed.length === 2);
+    stdout.mockRestore();
+    stderr.mockRestore();
+    expect(printed.toSorted()).toEqual([
+      "convex │ Convex functions ready!\n",
+      "convex │ function failed\n",
+    ]);
   });
 
   it("warns and carries on when convex is not installed", () => {

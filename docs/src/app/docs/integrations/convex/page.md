@@ -276,6 +276,10 @@ decides.
 
 ## Turn off the dev runner
 
+`farm dev` starts `convex dev` for you and marks each line it prints with `convex │`. Until a
+deployment is chosen in `.env.local`, Convex keeps the terminal unlabelled so it can ask its setup
+questions.
+
 ```ts
 convex({ dev: false });
 ```
