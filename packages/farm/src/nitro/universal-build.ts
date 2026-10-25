@@ -26,6 +26,7 @@ import {
 } from "./client-css-href";
 import type { RouteManager, ApplicationMetadataRouteEntry } from "../routing/route-manager";
 import { compareRoutePatternSpecificity } from "../routing/specificity";
+import { layoutsCanCoverSamePage } from "../routing/layout-selector";
 import {
   getRouteDirectoryDepth,
   getRouteGroupScope,
@@ -2920,9 +2921,18 @@ function generateClientHydrationEntry(
   const layoutImportStatements: string[] = [];
   const layoutRegistrations: string[] = [];
 
+  // The client renders layouts only on pages where a layout hydrates, and then
+  // renders that page's whole layout chain. Any other layout is server-only: its
+  // module, and everything it imports, stays out of the public client entry.
+  const hydratingLayoutPatterns = layoutRoutes
+    .filter((layout) => layout.shouldHydrate)
+    .map((layout) => layout.pattern);
   layoutRoutes.forEach((layout, index) => {
     const relativePath = toImportPath(layout.modulePath);
-    if (!layout.hasIsolatedClientBoundaries) {
+    const rendersOnClient =
+      !layout.hasIsolatedClientBoundaries &&
+      hydratingLayoutPatterns.some((pattern) => layoutsCanCoverSamePage(layout.pattern, pattern));
+    if (rendersOnClient) {
       layoutImportStatements.push(`import Layout${index} from "${relativePath}";`);
     }
     const groupScope = getRouteGroupScope(layout.pattern);
@@ -2930,7 +2940,7 @@ function generateClientHydrationEntry(
       ? `, urlPattern: ${JSON.stringify(stripRouteGroups(layout.pattern))}, groupScope: ${JSON.stringify(groupScope)}`
       : "";
     layoutRegistrations.push(
-      `  { pattern: ${JSON.stringify(layout.pattern)}${groupFields}, Component: ${layout.hasIsolatedClientBoundaries ? "null" : `Layout${index}`}, shouldHydrate: ${JSON.stringify(layout.shouldHydrate)}, islandStrategy: ${JSON.stringify(layout.islandStrategy)} }`,
+      `  { pattern: ${JSON.stringify(layout.pattern)}${groupFields}, Component: ${rendersOnClient ? `Layout${index}` : "null"}, shouldHydrate: ${JSON.stringify(layout.shouldHydrate)}, islandStrategy: ${JSON.stringify(layout.islandStrategy)} }`,
     );
   });
 
@@ -5949,7 +5959,7 @@ import { fileURLToPath as farmDocsFileURLToPath } from "node:url";`
     ? `import { applyMarkdownNegotiationHeaders, createMarkdownMirrorResponse, getFarmMarkdownAlternatePath } from "@farm.js/core/markdown";`
     : "";
   const appMarkdownImport = hasMarkdownPages
-    ? `import { createFarmMarkdownRouteModule, createFarmMarkdownSourceResponse, isFarmMarkdownPublicSourceResponse } from "@farm.js/core/internal/app-markdown-runtime";`
+    ? `import { FARM_MARKDOWN_ANONYMOUS_CLIENT_ADDRESS, createFarmMarkdownRouteModule, createFarmMarkdownSourceResponse, isFarmMarkdownPublicSourceResponse } from "@farm.js/core/internal/app-markdown-runtime";`
     : "const createFarmMarkdownSourceResponse = null;\nconst isFarmMarkdownPublicSourceResponse = null;";
   // Always available: agents can request Markdown on any route, so the
   // Markdown error body is not gated on the app having Markdown page files.
@@ -6518,7 +6528,18 @@ const apiRoutes = ${apiRoutes.length > 0 ? "mergePluginAPIRoutes(" : ""}[${apiRe
 function dispatchFarmPluginAPIRequest(request) {
   const url = new URL(request.url);
   url.pathname = applyFarmBasePath(url.pathname);
-  return handleFarmRequest(url.href === request.url ? request : new Request(url, request));
+  return fetchFarmInnerRequest(url.href === request.url ? request : new Request(url, request));
+}
+// A request the app makes to itself (a Markdown page check, a plugin's endpoint call) enters
+// through this module's outer \`fetch\`, as a direct request does: plugin runtime hooks run and
+// it gets its own request context, so \`cookies()\` and \`headers()\` are its own, never the
+// caller's. It asks for an identity body: the caller reads it, and the outer response is
+// compressed once.
+function fetchFarmInnerRequest(request, context) {
+  if (!request.headers.has("accept-encoding")) return fetch(request, context);
+  const headers = new Headers(request.headers);
+  headers.delete("accept-encoding");
+  return fetch(new Request(request, { headers }), context);
 }
 const farmLocalAPIBasePath = ${JSON.stringify(resolveFarmAPIServerBasePath(config.api))};
 const farmOpenAPIReference = ${JSON.stringify(openAPIReference)};
@@ -7519,7 +7540,9 @@ async function handleFarmDefaultMCP(request) {
     },
   });
 }
-const farmDefaultMCPReadMarkdown = createFarmLlmsMarkdownReader((page) => handleFarmRequest(page));
+// \`fetch\` is this module's outer request entry: plugin runtime hooks run and the page
+// gets its own request context, as for a direct request.
+const farmDefaultMCPReadMarkdown = createFarmLlmsMarkdownReader((page) => fetch(page));
 `
     : ""
 }
@@ -7552,14 +7575,15 @@ function createFarmLlmsTxtContext(request, full) {
           : ""
       }
     }),
-    // llms-full.txt reads each page's .md mirror through this same handler,
-    // with a fresh request so the caller's cookies never shape its content.
-    // HEAD discards the body, so it reads nothing.
+    // llms-full.txt reads each page's .md mirror through this module's outer
+    // request entry, so plugin runtime hooks run and each read has a fresh request
+    // context: the caller's cookies never shape its content. HEAD discards the
+    // body, so it reads nothing.
     ...(full
       ? {
           markdown: request.method.toUpperCase() === "HEAD"
             ? async () => null
-            : createFarmLlmsMarkdownReader((page) => handleFarmRequest(page)),
+            : createFarmLlmsMarkdownReader((page) => fetch(page)),
         }
       : {}),
   };
@@ -8409,7 +8433,13 @@ async function handleFarmRequestInContext(
       const match = matchPageRoute(getFarmRoutePathname(targetPathname));
       return match?.route?.markdownSource || null;
     },
-    renderPage: (targetRequest) => handleFarmRequest(targetRequest, adapterContext),
+    clientAddress: adapterContext?.clientAddress,
+    // An anonymous visitor's request: guards never see the caller's address.
+    renderPage: (targetRequest) =>
+      fetchFarmInnerRequest(targetRequest, {
+        ...adapterContext,
+        clientAddress: FARM_MARKDOWN_ANONYMOUS_CLIENT_ADDRESS,
+      }),
   });
   if (markdownSourceResponse) {
     return isFarmMarkdownPublicSourceResponse(markdownSourceResponse)
@@ -8433,7 +8463,7 @@ async function handleFarmRequestInContext(
       config: farmMarkdownConfig,
       routeExists: (targetPathname) =>
         Boolean(matchPageRoute(getFarmRoutePathname(targetPathname))),
-      renderPage: (targetRequest) => handleFarmRequest(targetRequest, adapterContext),
+      renderPage: (targetRequest) => fetchFarmInnerRequest(targetRequest, adapterContext),
       apiServerBasePath: farmLocalAPIBasePath,
     });
     if (markdownResponse) {

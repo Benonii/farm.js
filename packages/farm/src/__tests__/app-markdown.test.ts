@@ -136,6 +136,93 @@ describe("app markdown pages", () => {
     await expect(response?.text()).resolves.toBe("# Curated home");
   });
 
+  it("checks the page as an outsider for a caller with a client address", async () => {
+    const seen: Array<{ headers: string[] }> = [];
+    const source = { filePath: "/app/office/page.md", source: "# Office" };
+    const respond = (request: Request, clientAddress?: string) =>
+      appMarkdownRuntime.createFarmMarkdownSourceResponse({
+        request,
+        config: resolveMdxConfig(undefined),
+        clientAddress,
+        resolveSource: () => source,
+        renderPage(pageRequest) {
+          seen.push({ headers: [...pageRequest.headers.keys()].sort() });
+          // Stands in for an office IP allowlist: the anonymous check is refused.
+          return new Response("office network only", { status: 403 });
+        },
+      });
+    const negotiated = (headers: Record<string, string> = {}) =>
+      new Request("https://farm.test/office", { headers: { accept: "text/markdown", ...headers } });
+
+    for (const [request, clientAddress] of [
+      [negotiated({ "x-real-ip": "10.0.0.5" }), undefined],
+      [negotiated({ "x-forwarded-for": "10.0.0.5", forwarded: "for=10.0.0.5" }), undefined],
+      [negotiated({ via: "1.1 office-proxy" }), undefined],
+      [negotiated(), "10.0.0.5"],
+    ] as const) {
+      expect(await respond(request, clientAddress)).toBeNull();
+    }
+    expect(
+      await (await respond(new Request("https://farm.test/office.md"), "10.0.0.5"))!.status,
+    ).toBe(404);
+    // Only the anonymous visitor's own headers reach the check.
+    expect(seen.map((entry) => entry.headers)).toEqual(Array(5).fill(["accept"]));
+
+    // The check's own request is already the anonymous visitor's: it renders the page's HTML
+    // as that visitor, and the allowlist refuses it.
+    seen.length = 0;
+    const inner = await respond(
+      negotiated(),
+      appMarkdownRuntime.FARM_MARKDOWN_ANONYMOUS_CLIENT_ADDRESS,
+    );
+    expect(inner).toBeNull();
+    expect(seen).toEqual([{ headers: ["accept"] }]);
+  });
+
+  it("serves an anonymous visitor the source only when the page itself renders", async () => {
+    const source = { filePath: "/app/staff/page.md", source: "# Staff" };
+    const pages: Request[] = [];
+    const respond = (request: Request, page: Response) =>
+      appMarkdownRuntime.createFarmMarkdownSourceResponse({
+        request,
+        config: resolveMdxConfig(undefined),
+        clientAddress: appMarkdownRuntime.FARM_MARKDOWN_ANONYMOUS_CLIENT_ADDRESS,
+        resolveSource: () => source,
+        renderPage(pageRequest) {
+          pages.push(pageRequest);
+          return page;
+        },
+      });
+    const negotiated = () =>
+      new Request("https://farm.test/staff", {
+        headers: { accept: "text/markdown", "if-none-match": '"v1"', range: "bytes=0-1" },
+      });
+
+    // A guard in page.tsx or layout.tsx answers the render with a redirect, a refusal or an
+    // error; none of them is the page.
+    for (const page of [
+      new Response(null, { status: 307, headers: { location: "/sign-in" } }),
+      new Response("denied", { status: 403 }),
+      new Response("<h1>Error</h1>", { status: 500, headers: { "content-type": "text/html" } }),
+      new Response("{}", { headers: { "content-type": "application/json" } }),
+    ]) {
+      expect(await respond(negotiated(), page)).toBeNull();
+    }
+    const served = await respond(
+      negotiated(),
+      new Response("<h1>Staff</h1>", { headers: { "content-type": "text/html" } }),
+    );
+    expect(served?.headers.get("cache-control")).toContain("public");
+    await expect(served!.text()).resolves.toBe("# Staff");
+    // The page's whole HTML, unredirected, without the caller's validators or range.
+    for (const request of pages) {
+      expect(new URL(request.url).pathname).toBe("/staff");
+      expect(request.method).toBe("GET");
+      expect(request.redirect).toBe("manual");
+      expect([...request.headers]).toEqual([["accept", "text/html"]]);
+    }
+  });
+
   it("ignores content negotiation when markdown has zero preference", async () => {
     const response = await createFarmMarkdownSourceResponse({
       request: new Request("https://farm.test/about", {

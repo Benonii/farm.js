@@ -75,20 +75,20 @@ importers:
         specifier: workspace:*
         version: link:../packages/farm-webmcp
       '@farming-labs/docs':
-        specifier: 0.2.130
-        version: 0.2.130(react@19.2.8)(supports-color@10.2.2)
+        specifier: 0.2.132
+        version: 0.2.132(react@19.2.8)(supports-color@10.2.2)
       '@farming-labs/farmjs':
-        specifier: 0.2.130
-        version: 0.2.130(@farm.js/core@packages+farm)(@farming-labs/docs@0.2.130)(@farming-labs/theme@0.2.130)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(rollup@4.52.4)(supports-color@10.2.2)
+        specifier: 0.2.132
+        version: 0.2.132(@farm.js/core@packages+farm)(@farming-labs/docs@0.2.132)(@farming-labs/theme@0.2.132)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(rollup@4.52.4)(supports-color@10.2.2)
       '@farming-labs/theme':
-        specifier: 0.2.130
-        version: 0.2.130(@farming-labs/docs@0.2.130)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
+        specifier: 0.2.132
+        version: 0.2.132(@farming-labs/docs@0.2.132)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
       '@farming-labs/theme-production':
         specifier: npm:@farming-labs/theme@0.2.99
-        version: /@farming-labs/theme@0.2.99(@farming-labs/docs@0.2.130)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
+        version: /@farming-labs/theme@0.2.99(@farming-labs/docs@0.2.132)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
       '@farming-labs/theme-runtime':
-        specifier: npm:@farming-labs/theme@0.2.130
-        version: /@farming-labs/theme@0.2.130(@farming-labs/docs@0.2.130)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
+        specifier: npm:@farming-labs/theme@0.2.132
+        version: /@farming-labs/theme@0.2.132(@farming-labs/docs@0.2.132)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
       '@prisma/client':
         specifier: 6.7.0
         version: 6.7.0(prisma@6.7.0)(typescript@5.9.3)
@@ -166,8 +166,8 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -323,8 +323,8 @@ importers:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@22.20.5)
       zod:
-        specifier: ^4.1.12
-        version: 4.1.12
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -358,7 +358,7 @@ importers:
         version: link:../../packages/farm
       agents:
         specifier: 0.17.4
-        version: 0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@5.20260716.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.5)
+        version: 0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@5.20260716.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.7)
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -446,8 +446,8 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
       zod:
-        specifier: ^4.1.12
-        version: 4.3.6
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -623,7 +623,7 @@ importers:
         version: link:../../packages/farm-eve
       ai:
         specifier: ^7.0.26
-        version: 7.0.30(zod@4.6.5)
+        version: 7.0.30(zod@4.6.7)
       eve:
         specifier: 0.24.6
         version: 0.24.6(@opentelemetry/api@1.9.1)(ai@7.0.30)(miniflare@4.20260710.0)(vite@8.3.4)
@@ -964,8 +964,8 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -1109,8 +1109,8 @@ importers:
         specifier: 10.29.8
         version: 10.29.8(preact-render-to-string@6.7.0)
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -1301,8 +1301,8 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react-dom@19.2.8)(react@19.2.8)(webpack@5.102.1)
       zod:
-        specifier: ^4.1.0
-        version: 4.1.12
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/plugin':
         specifier: workspace:*
@@ -1434,8 +1434,8 @@ importers:
         specifier: 1.9.14
         version: 1.9.14
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -1842,8 +1842,8 @@ importers:
         specifier: 5.56.8
         version: 5.56.8
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -1874,13 +1874,13 @@ importers:
         version: 5.3.0
       pinia:
         specifier: 4.0.3
-        version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@5.9.3)(vue@3.5.41)
+        version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@5.9.3)(vue@3.5.44)
       vue:
-        specifier: 3.5.41
-        version: 3.5.41(typescript@5.9.3)
+        specifier: 3.5.44
+        version: 3.5.44(typescript@5.9.3)
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -1947,8 +1947,8 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
       zod:
-        specifier: 4.1.12
-        version: 4.1.12
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@farm.js/cli':
         specifier: workspace:*
@@ -2165,7 +2165,7 @@ importers:
         version: link:../farm
       ai:
         specifier: ^7.0.11
-        version: 7.0.30(zod@4.6.5)
+        version: 7.0.30(zod@4.6.7)
 
   packages/farm-analyzer:
     dependencies:
@@ -2296,7 +2296,7 @@ importers:
         version: 22.20.5
       agents:
         specifier: 0.17.4
-        version: 0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@4.20260702.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.5)
+        version: 0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@4.20260702.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.7)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.30)(supports-color@10.2.2)(typescript@5.9.3)
@@ -2688,8 +2688,8 @@ importers:
         specifier: workspace:*
         version: link:../farm
       '@modelcontextprotocol/server':
-        specifier: 2.0.0
-        version: 2.0.0
+        specifier: ^2.3.0
+        version: 2.3.0
       zod:
         specifier: ^4.1.12
         version: 4.3.6
@@ -3234,10 +3234,10 @@ importers:
     dependencies:
       '@vitejs/plugin-vue':
         specifier: 6.0.8
-        version: 6.0.8(vite@8.3.4)(vue@3.5.41)
+        version: 6.0.8(vite@8.3.4)(vue@3.5.44)
       '@vue/server-renderer':
-        specifier: 3.5.41
-        version: 3.5.41
+        specifier: 3.5.44
+        version: 3.5.44
     devDependencies:
       '@farm.js/core':
         specifier: workspace:*
@@ -3264,8 +3264,8 @@ importers:
         specifier: 5.0.5
         version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@5.0.5)(jsdom@25.0.1)(vite@8.3.4)
       vue:
-        specifier: 3.5.41
-        version: 3.5.41(typescript@5.9.3)
+        specifier: 3.5.44
+        version: 3.5.44(typescript@5.9.3)
 
   packages/farm-wasm:
     dependencies:
@@ -3389,18 +3389,18 @@ importers:
 
 packages:
 
-  /@ai-sdk/gateway@4.0.22(zod@4.6.5):
+  /@ai-sdk/gateway@4.0.22(zod@4.6.7):
     resolution: {integrity: sha512-KdXJLa6O25fltJC/Lh8gnB1VaYMdX2mEKIalkohuItS+Ig523XxwK9e/Uuc66AvtrLIf7G51cDg3rDpP9mrxwQ==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
     dependencies:
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.10(zod@4.6.5)
+      '@ai-sdk/provider-utils': 5.0.10(zod@4.6.7)
       '@vercel/oidc': 3.2.0
-      zod: 4.6.5
+      zod: 4.6.7
 
-  /@ai-sdk/provider-utils@5.0.10(zod@4.6.5):
+  /@ai-sdk/provider-utils@5.0.10(zod@4.6.7):
     resolution: {integrity: sha512-uPyec0+85dwxZYXtb8qe8gCjhjDfxP4LCDo/uRQS/iG+FIgYbHPRhr/ys281udG90bTaE18+5cxWraYaf8oHCw==}
     engines: {node: '>=22'}
     peerDependencies:
@@ -3410,7 +3410,7 @@ packages:
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.0
-      zod: 4.6.5
+      zod: 4.6.7
 
   /@ai-sdk/provider@4.0.3:
     resolution: {integrity: sha512-e0CpNWJUY7OxAFAnCZkw+ri9QOHWwTs1tXP42782KFGCU07qt8NiXCrCVowyCB5dP2r5/Uls+g2oPd8kOJn9dw==}
@@ -3773,6 +3773,10 @@ packages:
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
     engines: {node: '>=6.9.0'}
 
+  /@babel/helper-string-parser@7.29.11:
+    resolution: {integrity: sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g==}
+    engines: {node: '>=6.9.0'}
+
   /@babel/helper-string-parser@7.29.7:
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
     engines: {node: '>=6.9.0'}
@@ -3836,6 +3840,13 @@ packages:
     hasBin: true
     dependencies:
       '@babel/types': 7.28.4
+
+  /@babel/parser@7.29.11:
+    resolution: {integrity: sha512-OZ6+oaK7GMyg3IfCpj8JOmn8n+w2rJbDT0LLfVDTLb1ZFeKDh3AiNELgCMUw175IJHSkLl74hG0M0VLsvx+gag==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+    dependencies:
+      '@babel/types': 7.29.11
 
   /@babel/parser@7.29.8:
     resolution: {integrity: sha512-E8lTAYNB1KW+FH+VGJuZM1ioAx2E6oVlvQFRrf5P8ZZmsiJXYAD9vTFV7yyEURNzgh1dFqMZuO6tUwcARbqFCA==}
@@ -4032,6 +4043,13 @@ packages:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
 
+  /@babel/types@7.29.11:
+    resolution: {integrity: sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ==}
+    engines: {node: '>=6.9.0'}
+    dependencies:
+      '@babel/helper-string-parser': 7.29.11
+      '@babel/helper-validator-identifier': 7.29.7
+
   /@babel/types@7.29.8:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
@@ -4067,11 +4085,11 @@ packages:
       '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       '@standard-schema/spec': 1.1.0
-      better-call: 1.3.2(zod@4.3.6)
+      better-call: 1.3.2(zod@4.6.7)
       jose: 6.2.1
       kysely: 0.28.12
       nanostores: 1.5.4
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
   /@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5)(jose@6.2.3)(kysely@0.28.17)(nanostores@1.5.4):
@@ -4096,11 +4114,11 @@ packages:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.43.0
       '@standard-schema/spec': 1.1.0
-      better-call: 1.3.5(zod@4.6.5)
+      better-call: 1.3.5(zod@4.6.7)
       jose: 6.2.3
       kysely: 0.28.17
       nanostores: 1.5.4
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
   /@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.9.1)(better-call@1.4.0)(jose@6.2.3)(kysely@0.28.17)(nanostores@1.5.4):
@@ -4122,11 +4140,11 @@ packages:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.43.0
       '@standard-schema/spec': 1.1.0
-      better-call: 1.4.0(zod@4.6.5)
+      better-call: 1.4.0(zod@4.6.7)
       jose: 6.2.3
       kysely: 0.28.17
       nanostores: 1.5.4
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
   /@better-auth/drizzle-adapter@1.5.5(@better-auth/core@1.5.5)(@better-auth/utils@0.3.1)(drizzle-orm@0.44.7):
@@ -4300,9 +4318,9 @@ packages:
       '@simplewebauthn/browser': 13.3.0
       '@simplewebauthn/server': 13.3.0
       better-auth: 1.5.5(better-sqlite3@12.8.0)(drizzle-kit@0.31.10)(drizzle-orm@0.44.7)(mongodb@6.21.0)(react-dom@19.2.8)(react@19.2.8)
-      better-call: 1.3.2(zod@4.3.6)
+      better-call: 1.3.2(zod@4.6.7)
       nanostores: 1.5.4
-      zod: 4.3.6
+      zod: 4.6.7
     dev: false
 
   /@better-auth/prisma-adapter@1.5.5(@better-auth/core@1.5.5)(@better-auth/utils@0.3.1)(@prisma/client@6.19.2)(prisma@6.19.2):
@@ -4537,7 +4555,7 @@ packages:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  /@cloudflare/codemode@0.4.3(@modelcontextprotocol/sdk@1.29.0)(zod@4.6.5):
+  /@cloudflare/codemode@0.4.3(@modelcontextprotocol/sdk@1.29.0)(zod@4.6.7):
     resolution: {integrity: sha512-S6LIqj/NnmFRFxm3j0tPEGMF8HQF5DpV7sQg/W+U48YmnznTKOBcbS8eiV7SxBpIITLuMBcL4KpTDm1RDL20pA==}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.25.0
@@ -4554,10 +4572,10 @@ packages:
       zod:
         optional: true
     dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.5)
+      '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.7)
       '@types/json-schema': 7.0.15
       acorn: 8.17.0
-      zod: 4.6.5
+      zod: 4.6.7
 
   /@cloudflare/kv-asset-handler@0.5.0:
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
@@ -4657,13 +4675,13 @@ packages:
       better-auth: 1.6.11(@opentelemetry/api@1.9.1)(react-dom@19.2.8)(react@19.2.8)
       common-tags: 1.8.2
       convex: 1.48.0(react@19.2.8)
-      convex-helpers: 0.1.129(convex@1.48.0)(react@19.2.8)(typescript@5.9.3)(zod@4.6.5)
+      convex-helpers: 0.1.129(convex@1.48.0)(react@19.2.8)(typescript@5.9.3)(zod@4.6.7)
       jose: 6.2.3
       react: 19.2.8
-      remeda: 2.53.0
+      remeda: 2.54.1
       semver: 7.8.5
       type-fest: 5.7.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@standard-schema/spec'
       - hono
@@ -5902,7 +5920,7 @@ packages:
       react: 19.2.8
       remark-gfm: 4.0.1(supports-color@10.2.2)
       yaml: 2.9.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - bare-abort-controller
       - react-native-b4a
@@ -5934,13 +5952,13 @@ packages:
       react: 19.2.8
       remark-gfm: 4.0.1(supports-color@10.2.2)
       yaml: 2.9.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /@farming-labs/docs@0.2.130(react@19.2.8)(supports-color@10.2.2):
-    resolution: {integrity: sha512-qhRrTgR1bBC1+6+ysHO2DDqRjZQOujQZt1Cy6fS5IjhV5MqAAoKUDjAsa4HIUyJ3yXzN8TFzUcagKLC6a50dXA==}
+  /@farming-labs/docs@0.2.132(react@19.2.8)(supports-color@10.2.2):
+    resolution: {integrity: sha512-H5cODaf5g8wPDwVTZFbu3JJB1jU2J1FlTFU6k7HpnAzrF09HPrGxtAhmz3rNnr9bBMFP9IT5K40cNmfPIsifFw==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -5967,7 +5985,7 @@ packages:
       remark-parse: 11.0.0(supports-color@10.2.2)
       unified: 11.0.5
       yaml: 2.9.1
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -5987,14 +6005,14 @@ packages:
       '@mdx-js/mdx': 3.1.1(supports-color@10.2.2)
       '@mdx-js/rollup': 3.1.1(rollup@4.52.4)(supports-color@10.2.2)
       '@scalar/core': 0.4.6
-      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.5)
+      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.7)
       gray-matter: 4.0.3
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       remark-frontmatter: 5.0.0(supports-color@10.2.2)
       remark-gfm: 4.0.1(supports-color@10.2.2)
       remark-mdx-frontmatter: 5.2.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@mixedbread/sdk'
       - '@modelcontextprotocol/server'
@@ -6016,8 +6034,8 @@ packages:
       - waku
     dev: false
 
-  /@farming-labs/farmjs@0.2.130(@farm.js/core@packages+farm)(@farming-labs/docs@0.2.130)(@farming-labs/theme@0.2.130)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(rollup@4.52.4)(supports-color@10.2.2):
-    resolution: {integrity: sha512-lIhPcHYiLk0YytVrSzriS12Z6zzI4B4dvSyOkEYCrcaFotpIw+kTreEjSNgoMJpj1TffLuDZlG7yJn3/zRd0Bw==}
+  /@farming-labs/farmjs@0.2.132(@farm.js/core@packages+farm)(@farming-labs/docs@0.2.132)(@farming-labs/theme@0.2.132)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(rollup@4.52.4)(supports-color@10.2.2):
+    resolution: {integrity: sha512-RflMW2hu2H/Wi8I/Degu3AnSBBAQjyeJXGRUUyfzjtV3qiBqjZFEdqOSOz0eCytLE8RSeLaokGjbUJut1nknvw==}
     peerDependencies:
       '@farm.js/core': ^0.1.0-beta.106
       '@farming-labs/docs': '*'
@@ -6026,19 +6044,19 @@ packages:
       react-dom: ^18.2.0 || ^19.0.0
     dependencies:
       '@farm.js/core': link:packages/farm
-      '@farming-labs/docs': 0.2.130(react@19.2.8)(supports-color@10.2.2)
-      '@farming-labs/theme': 0.2.130(@farming-labs/docs@0.2.130)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
+      '@farming-labs/docs': 0.2.132(react@19.2.8)(supports-color@10.2.2)
+      '@farming-labs/theme': 0.2.132(@farming-labs/docs@0.2.132)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
       '@mdx-js/mdx': 3.1.1(supports-color@10.2.2)
       '@mdx-js/rollup': 3.1.1(rollup@4.52.4)(supports-color@10.2.2)
       '@scalar/core': 0.4.6
-      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.5)
+      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.7)
       gray-matter: 4.0.3
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       remark-frontmatter: 5.0.0(supports-color@10.2.2)
       remark-gfm: 4.0.1(supports-color@10.2.2)
       remark-mdx-frontmatter: 5.2.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@mixedbread/sdk'
       - '@modelcontextprotocol/server'
@@ -6514,13 +6532,13 @@ packages:
         optional: true
     dependencies:
       '@farming-labs/docs': 0.2.121(react@19.2.8)(supports-color@10.2.2)
-      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.5)
+      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.7)
       fumadocs-ui: 16.17.1(@types/react-dom@18.3.7)(@types/react@18.3.26)(fumadocs-core@16.17.1)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
       gray-matter: 4.0.3
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       sugar-high: 0.9.5
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@mdx-js/mdx'
       - '@mixedbread/sdk'
@@ -6545,8 +6563,8 @@ packages:
       - waku
     dev: false
 
-  /@farming-labs/theme@0.2.130(@farming-labs/docs@0.2.130)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18):
-    resolution: {integrity: sha512-8YDiRJ0VgpB4cE8AbV/jKK5ZLvnWhe+azrhQdFyx1hJKQBsCGNkLf9r1nXglL0MoyeHBNzUVEPMtq+eEetjOaA==}
+  /@farming-labs/theme@0.2.132(@farming-labs/docs@0.2.132)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18):
+    resolution: {integrity: sha512-fbATQNAvtgJJXL61TRkNkp2rbkW5gUCKnKXrbCn7RCXsL0EV45tjvHokQa1K6kjJ9tmqDN85j93+GOkB0FMG8Q==}
     peerDependencies:
       '@farming-labs/docs': '>=0.0.1'
       next: '>=16.0.0'
@@ -6560,15 +6578,15 @@ packages:
       react-dom:
         optional: true
     dependencies:
-      '@farming-labs/docs': 0.2.130(react@19.2.8)(supports-color@10.2.2)
-      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.5)
+      '@farming-labs/docs': 0.2.132(react@19.2.8)(supports-color@10.2.2)
+      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.7)
       fumadocs-ui: 16.17.1(@types/react-dom@18.3.7)(@types/react@18.3.26)(fumadocs-core@16.17.1)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18)
       gray-matter: 4.0.3
       next: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.58.2)(react-dom@19.2.8)(react@19.2.8)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       sugar-high: 0.9.5
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@mdx-js/mdx'
       - '@mixedbread/sdk'
@@ -6593,7 +6611,7 @@ packages:
       - waku
     dev: false
 
-  /@farming-labs/theme@0.2.99(@farming-labs/docs@0.2.130)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18):
+  /@farming-labs/theme@0.2.99(@farming-labs/docs@0.2.132)(@types/react-dom@18.3.7)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(tailwindcss@3.4.18):
     resolution: {integrity: sha512-WZ150Ji5sdj5ECOPbasycKwbe9Af26PPnVLmpiBLXvEXoyJIYZqbiCL+08yjg4NeXzgpOD2tfVcDqW3r58vOcw==}
     peerDependencies:
       '@farming-labs/docs': '>=0.0.1'
@@ -6608,7 +6626,7 @@ packages:
       react-dom:
         optional: true
     dependencies:
-      '@farming-labs/docs': 0.2.130(react@19.2.8)(supports-color@10.2.2)
+      '@farming-labs/docs': 0.2.132(react@19.2.8)(supports-color@10.2.2)
       fumadocs-core: 16.7.16(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.3.6)
       fumadocs-ui: 16.7.16(@types/react-dom@18.3.7)(@types/react@18.3.26)(fumadocs-core@16.7.16)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(tailwindcss@3.4.18)
       gray-matter: 4.0.3
@@ -6616,7 +6634,7 @@ packages:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       sugar-high: 0.9.5
-      zod: 4.3.6
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@emotion/is-prop-valid'
       - '@mdx-js/mdx'
@@ -7283,7 +7301,7 @@ packages:
   /@jridgewell/gen-mapping@0.3.13:
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@jridgewell/trace-mapping': 0.3.31
 
   /@jridgewell/remapping@2.3.5:
@@ -7318,7 +7336,7 @@ packages:
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   /@js-sdsl/ordered-map@4.4.2:
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
@@ -7393,16 +7411,16 @@ packages:
     resolution: {integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==}
     engines: {node: '>=20'}
     dependencies:
-      zod: 4.6.5
+      zod: 4.6.7
 
   /@modelcontextprotocol/core@2.3.0:
     resolution: {integrity: sha512-09BHFaNVBe5pB2AhzCfLj0cqmsKLERvZQ4FblzP90UMGLaXVqdZPByFjURwsUYCmxonUW2yAwgTTvle+8O2/8w==}
     engines: {node: '>=20'}
     dependencies:
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
-  /@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.5):
+  /@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.7):
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -7428,8 +7446,8 @@ packages:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.6.5
-      zod-to-json-schema: 3.25.2(zod@4.6.5)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.2(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
 
@@ -7438,14 +7456,14 @@ packages:
     engines: {node: '>=20'}
     dependencies:
       '@modelcontextprotocol/core': 2.0.0
-      zod: 4.3.6
+      zod: 4.6.7
 
   /@modelcontextprotocol/server@2.3.0:
     resolution: {integrity: sha512-+6b0LdsQLmHsvS7J6sQJ4weTpzUn61fU1JKS+321/+IyDYoHW5CR2Tgqcs6GgAAQvlesCo6yX3xttgmx+XGtJw==}
     engines: {node: '>=20'}
     dependencies:
       '@modelcontextprotocol/core': 2.3.0
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
   /@module-federation/dts-plugin@2.9.0(typescript@5.9.3):
@@ -7604,7 +7622,7 @@ packages:
       validate-npm-package-name: 5.0.1
       yaml: 2.9.1
       yargs: 17.7.3
-      zod: 4.6.5
+      zod: 4.6.7
     dev: true
 
   /@netlify/database-dev@1.0.1:
@@ -7930,7 +7948,7 @@ packages:
       unixify: 1.0.0
       urlpattern-polyfill: 8.0.2
       yargs: 17.7.3
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - bare-abort-controller
       - encoding
@@ -9470,7 +9488,7 @@ packages:
     resolution: {integrity: sha512-tZEt8eLWsQVhmyfUQzXhnN84e5Cnu/JsYFnCci1ranWkIGveQc+wTiyzDCG9Tl1xiz1Y/ztPsAJ1fevj6ExdAA==}
     dependencies:
       standardwebhooks: 1.0.0
-      zod: 4.3.6
+      zod: 4.6.7
     dev: false
 
   /@poppinss/colors@4.1.6:
@@ -11748,7 +11766,7 @@ packages:
       '@scalar/helpers': 0.4.3
       nanoid: 5.1.16
       type-fest: 5.7.0
-      zod: 4.6.5
+      zod: 4.6.7
 
   /@selderee/plugin-htmlparser2@0.11.0:
     resolution: {integrity: sha512-P33hHGdldxGabLFjPPpaTxVolMrzrcegejx+0GxjrIb9Zv48D8yAIA/QTDR2dFl7Uz7urX8aX6+5bCZslr+gWQ==}
@@ -12364,7 +12382,7 @@ packages:
   /@types/better-sqlite3@7.6.13:
     resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
     dependencies:
-      '@types/node': 22.20.5
+      '@types/node': 20.19.21
 
   /@types/bunyan@1.8.11:
     resolution: {integrity: sha512-758fRH7umIMk5qt5ELmRMff4mLDlN+xyYzC+dkPTdKwbSkJFvz6xwyScrytPU0QIBbRRwbiE8/BIg8bpajerNQ==}
@@ -12758,7 +12776,7 @@ packages:
       tar-stream: 3.1.7
       undici: 7.29.1
       xdg-app-paths: 5.1.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - bare-abort-controller
       - react-native-b4a
@@ -12809,7 +12827,7 @@ packages:
       vitefu: 1.1.3(vite@8.3.4)
     dev: true
 
-  /@vitejs/plugin-vue@6.0.8(vite@8.3.4)(vue@3.5.41):
+  /@vitejs/plugin-vue@6.0.8(vite@8.3.4)(vue@3.5.44):
     resolution: {integrity: sha512-0ZjgOg7oO6farnNGup7yvoM/YXZV84OZxHAwtflItNa/6zzQyVb5LNxyea3FEKEX2XlagIKzrlH7wwxkKgtiew==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
@@ -12818,7 +12836,7 @@ packages:
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.3.4(@types/node@22.20.5)(esbuild@0.27.3)
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.44(typescript@5.9.3)
     dev: false
 
   /@vitest/coverage-v8@5.0.5(vitest@5.0.5):
@@ -12915,12 +12933,29 @@ packages:
       entities: 7.0.1
       estree-walker: 2.0.2
       source-map-js: 1.2.2
+    dev: true
+
+  /@vue/compiler-core@3.5.44:
+    resolution: {integrity: sha512-k34nCytbK8PQ1gR2mGROYOw6Pnv/mumqIdrZ3x2tbyXZDWm7ViKGLTfdB+DRrWqEQsLgGJvn0WN9jBif5zCTLQ==}
+    dependencies:
+      '@babel/parser': 7.29.11
+      '@vue/shared': 3.5.44
+      entities: 7.0.1
+      estree-walker: 2.0.2
+      source-map-js: 1.2.2
 
   /@vue/compiler-dom@3.5.41:
     resolution: {integrity: sha512-oKacVfNglLvGjnS6BXOlGL7EyG2h8X03pqXCjzotRZUaXGjbrTJUnVAQjrCqUnS+lyu31nwQjZY/d817GmCnfw==}
     dependencies:
       '@vue/compiler-core': 3.5.41
       '@vue/shared': 3.5.41
+    dev: true
+
+  /@vue/compiler-dom@3.5.44:
+    resolution: {integrity: sha512-W5AoBFWdw1lQAKiHowkfgFKFab82oSRT6sGsPfw/q1GRjsy/ZJFLHGhJyBRIFN9APLTUduDH9U2JAiPOIyKuYg==}
+    dependencies:
+      '@vue/compiler-core': 3.5.44
+      '@vue/shared': 3.5.44
 
   /@vue/compiler-sfc@3.5.41:
     resolution: {integrity: sha512-XJhip7R2wy6vX3knCxdZN4KracFaZUef58s1KYewqluedHIJaPIVfXoYT7MF1F8nCvv6k8bWWxDC8opMkg1VTQ==}
@@ -12933,13 +12968,34 @@ packages:
       estree-walker: 2.0.2
       magic-string: 0.30.21
       postcss: 8.5.30
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
+    dev: true
+
+  /@vue/compiler-sfc@3.5.44:
+    resolution: {integrity: sha512-dzHmQ4jXTpdr5FjIQUeykVakN/uzqFbUo9/C5ikBFg3a3PeM6uRxeczx1ZbXBML0/zJstEh3ygYipzR5Z7b2Pw==}
+    dependencies:
+      '@babel/parser': 7.29.11
+      '@vue/compiler-core': 3.5.44
+      '@vue/compiler-dom': 3.5.44
+      '@vue/compiler-ssr': 3.5.44
+      '@vue/shared': 3.5.44
+      estree-walker: 2.0.2
+      magic-string: 0.30.21
+      postcss: 8.5.30
+      source-map-js: 1.2.2
 
   /@vue/compiler-ssr@3.5.41:
     resolution: {integrity: sha512-U3v5OejKEGqOI0Wy0+Sz7hGuIFZHA4LSXzrNM3IMIeDyJEBBfTpX26n3SDgToRpP2bLc9FfI2j/kSgcJ8Emq5A==}
     dependencies:
       '@vue/compiler-dom': 3.5.41
       '@vue/shared': 3.5.41
+    dev: true
+
+  /@vue/compiler-ssr@3.5.44:
+    resolution: {integrity: sha512-xr5gb1JVHlfXJwSlRz1FeP6uxoazdzHuMTVLE7up+4Vrqxk219CvxLPxD9NXBt47yvZW7+p4DXfyp4O1fkByIA==}
+    dependencies:
+      '@vue/compiler-dom': 3.5.44
+      '@vue/shared': 3.5.44
 
   /@vue/devtools-api@8.2.1:
     resolution: {integrity: sha512-6u4vXBlIBAC1wMplIZgpyPn7uh/s4Bf6F5bMzvLv+EdJ0aHs/+4B7Ygv864EStQSjRbsRzTko/kUG1A1IejQ3A==}
@@ -12972,34 +13028,38 @@ packages:
       picomatch: 4.0.7
     dev: true
 
-  /@vue/reactivity@3.5.41:
-    resolution: {integrity: sha512-rznsqKM0np0x18EjzF8x88MpEhdNsffbvFbckLL5+oUKz1BxAImEmO7J1ArRYSyo6aQaVoBDp7jEkT91OOxydA==}
+  /@vue/reactivity@3.5.44:
+    resolution: {integrity: sha512-u+QJdKeBBEADkPdevsL+6E12QlYVfBD8Zcw5qjDQKtamI6l14KyqazJMobhCKelhWN5zpyKUiEDoTyHE93cqWw==}
     dependencies:
-      '@vue/shared': 3.5.41
+      '@vue/shared': 3.5.44
 
-  /@vue/runtime-core@3.5.41:
-    resolution: {integrity: sha512-Vcry58hiAKwGen9Z1jUZE0feFsNArPCMOImYI8el48A9Idf6DuQYD0U05zZIF2Iad1hGhPSvcbBbAOhNr55fhg==}
+  /@vue/runtime-core@3.5.44:
+    resolution: {integrity: sha512-uEa/ndwjhrrhnOfb2p+sZy6zeoamJOISqaLSJGk/8R6nABT1ZldpzcJoPzKj+zHVomVBPcmQYyC2r4LtvDV6CQ==}
     dependencies:
-      '@vue/reactivity': 3.5.41
-      '@vue/shared': 3.5.41
+      '@vue/reactivity': 3.5.44
+      '@vue/shared': 3.5.44
 
-  /@vue/runtime-dom@3.5.41:
-    resolution: {integrity: sha512-3vVBahVBS9+U6cmXBLyb8nE6/yYo4J/CGI9eVFs3KiMc0YHuudwKyShTD65jtJy/L9PUUxNAFu4cj4LiJ0UFbw==}
+  /@vue/runtime-dom@3.5.44:
+    resolution: {integrity: sha512-3fc4ARcXVhVBaJ3ujWiNZJARD6pkyRcwG+ZYhMzjKtKUp7MAY0HLwr7r3Smep3Li6ZaWT6ewdmx8XqdaD5oNZg==}
     dependencies:
-      '@vue/reactivity': 3.5.41
-      '@vue/runtime-core': 3.5.41
-      '@vue/shared': 3.5.41
+      '@vue/reactivity': 3.5.44
+      '@vue/runtime-core': 3.5.44
+      '@vue/shared': 3.5.44
       csstype: 3.2.3
 
-  /@vue/server-renderer@3.5.41:
-    resolution: {integrity: sha512-n6hx/pNFfbD6SuyeuMVkvqox8bwf/ET9JlA/kAz/imw8sw++wkqKe2mHX5KutjPpbKE4Z56yTHszoOjGMI9igQ==}
+  /@vue/server-renderer@3.5.44:
+    resolution: {integrity: sha512-R4S1UoH4h5Frrauv8Z5XE5TxV9oBiUSgWIC4TyVK1FK+RocRnOLwFA5Xcmo2011RlgJp+AbZCnw6afrhlgRuUQ==}
     dependencies:
-      '@vue/compiler-ssr': 3.5.41
-      '@vue/runtime-dom': 3.5.41
-      '@vue/shared': 3.5.41
+      '@vue/compiler-ssr': 3.5.44
+      '@vue/runtime-dom': 3.5.44
+      '@vue/shared': 3.5.44
 
   /@vue/shared@3.5.41:
     resolution: {integrity: sha512-IOnwSCma8j+9xJT6b8H0dEYidC80NsYmNMlZxRsukYcSoGaDBohog5hDxzeUXdFeGWFA++vWvxqOmrr96VlqMA==}
+    dev: true
+
+  /@vue/shared@3.5.44:
+    resolution: {integrity: sha512-H82XLH0DjmSOdbEwO15x3QTo1f5PWEtv237eLpYKc0mqLu+B8hnq16lFWmuBmNurkeiG3wr+oM1FhOll/YVFRg==}
 
   /@webassemblyjs/ast@1.14.1:
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
@@ -13229,7 +13289,7 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  /agents@0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@4.20260702.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.5):
+  /agents@0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@4.20260702.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.7):
     resolution: {integrity: sha512-K6YRbpD3VcwdTOPBlDgI4dILAwkhXo5cdxTlVF0IvUwQEKfMPawmH8E/QMXTN8CPGHqVYgYFACxTyk6nKlK+vg==}
     hasBin: true
     peerDependencies:
@@ -13263,8 +13323,8 @@ packages:
     dependencies:
       '@babel/plugin-proposal-decorators': 8.0.2(@babel/core@8.0.1)
       '@cfworker/json-schema': 4.1.1
-      '@cloudflare/codemode': 0.4.3(@modelcontextprotocol/sdk@1.29.0)(zod@4.6.5)
-      '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.5)
+      '@cloudflare/codemode': 0.4.3(@modelcontextprotocol/sdk@1.29.0)(zod@4.6.7)
+      '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.7)
       '@rolldown/plugin-babel': 0.2.3(@babel/core@8.0.1)(rolldown@1.2.15)(vite@8.3.4)
       cron-schedule: 6.0.0
       esbuild: 0.28.1
@@ -13276,7 +13336,7 @@ packages:
       vite: 8.3.4(@types/node@22.20.5)(esbuild@0.27.3)
       yaml: 2.9.0
       yargs: 18.0.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/plugin-transform-runtime'
@@ -13286,7 +13346,7 @@ packages:
       - supports-color
     dev: true
 
-  /agents@0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@5.20260716.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.5):
+  /agents@0.17.4(@babel/core@8.0.1)(@cloudflare/workers-types@5.20260716.1)(react@19.2.8)(rolldown@1.2.15)(supports-color@10.2.2)(vite@8.3.4)(zod@4.6.7):
     resolution: {integrity: sha512-K6YRbpD3VcwdTOPBlDgI4dILAwkhXo5cdxTlVF0IvUwQEKfMPawmH8E/QMXTN8CPGHqVYgYFACxTyk6nKlK+vg==}
     hasBin: true
     peerDependencies:
@@ -13320,8 +13380,8 @@ packages:
     dependencies:
       '@babel/plugin-proposal-decorators': 8.0.2(@babel/core@8.0.1)
       '@cfworker/json-schema': 4.1.1
-      '@cloudflare/codemode': 0.4.3(@modelcontextprotocol/sdk@1.29.0)(zod@4.6.5)
-      '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.5)
+      '@cloudflare/codemode': 0.4.3(@modelcontextprotocol/sdk@1.29.0)(zod@4.6.7)
+      '@modelcontextprotocol/sdk': 1.29.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.7)
       '@rolldown/plugin-babel': 0.2.3(@babel/core@8.0.1)(rolldown@1.2.15)(vite@8.3.4)
       cron-schedule: 6.0.0
       esbuild: 0.28.1
@@ -13333,7 +13393,7 @@ packages:
       vite: 8.3.4(@types/node@20.19.21)
       yaml: 2.9.0
       yargs: 18.0.0
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/plugin-transform-runtime'
@@ -13343,16 +13403,16 @@ packages:
       - supports-color
     dev: false
 
-  /ai@7.0.30(zod@4.6.5):
+  /ai@7.0.30(zod@4.6.7):
     resolution: {integrity: sha512-tm0gTAHSWBdDfW4P2mj+LlglGCUQTSA9ktyS2PsPgVhxNO9gYWTSnRAehiJ3h1lYsJBp1Zgbz3RH2lezJXagiw==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
     dependencies:
-      '@ai-sdk/gateway': 4.0.22(zod@4.6.5)
+      '@ai-sdk/gateway': 4.0.22(zod@4.6.7)
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.10(zod@4.6.5)
-      zod: 4.6.5
+      '@ai-sdk/provider-utils': 5.0.10(zod@4.6.7)
+      zod: 4.6.7
 
   /ajv-errors@3.0.0(ajv@8.17.1):
     resolution: {integrity: sha512-V3wD15YHfHz6y0KdhYFjyy9vWtEVALT9UrxfN3zqlI6dMioHnJrqOYfyPKol3oqrnCM9uwkcdCwkJ0WUcbLMTQ==}
@@ -13612,7 +13672,7 @@ packages:
     dependencies:
       query-string: 9.3.1
       rou3: 0.6.3
-      zod: 4.3.6
+      zod: 4.6.7
     dev: false
 
   /available-typed-arrays@1.0.7:
@@ -13809,7 +13869,7 @@ packages:
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
       '@prisma/client': 6.19.2(prisma@6.19.2)(typescript@5.9.3)
-      better-call: 1.3.2(zod@4.3.6)
+      better-call: 1.3.2(zod@4.6.7)
       better-sqlite3: 12.8.0
       defu: 6.1.4
       jose: 6.2.1
@@ -13820,7 +13880,7 @@ packages:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@5.0.5)(jsdom@25.0.1)(vite@8.3.4)
-      zod: 4.3.6
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
     dev: false
@@ -13898,7 +13958,7 @@ packages:
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
-      better-call: 1.3.2(zod@4.3.6)
+      better-call: 1.3.2(zod@4.6.7)
       better-sqlite3: 12.8.0
       defu: 6.1.4
       drizzle-kit: 0.31.10
@@ -13909,7 +13969,7 @@ packages:
       nanostores: 1.5.4
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      zod: 4.3.6
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
     dev: false
@@ -13987,14 +14047,14 @@ packages:
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.4.0
       '@noble/hashes': 2.4.0
-      better-call: 1.3.5(zod@4.6.5)
+      better-call: 1.3.5(zod@4.6.7)
       defu: 6.1.7
       jose: 6.2.3
       kysely: 0.28.17
       nanostores: 1.5.4
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - '@opentelemetry/api'
@@ -14070,7 +14130,7 @@ packages:
       '@better-fetch/fetch': 1.3.2
       '@noble/ciphers': 2.4.0
       '@noble/hashes': 2.4.0
-      better-call: 1.4.0(zod@4.6.5)
+      better-call: 1.4.0(zod@4.6.7)
       defu: 6.1.7
       jose: 6.2.3
       kysely: 0.28.17
@@ -14078,7 +14138,7 @@ packages:
       pg: 8.20.0
       react: 19.2.8
       vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@5.0.5)(jsdom@25.0.1)(vite@8.3.4)
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - '@opentelemetry/api'
     dev: false
@@ -14093,7 +14153,7 @@ packages:
       uncrypto: 0.1.3
     dev: false
 
-  /better-call@1.3.2(zod@4.3.6):
+  /better-call@1.3.2(zod@4.6.7):
     resolution: {integrity: sha512-4cZIfrerDsNTn3cm+MhLbUePN0gdwkhSXEuG7r/zuQ8c/H7iU0/jSK5TD3FW7U0MgKHce/8jGpPYNO4Ve+4NBw==}
     peerDependencies:
       zod: ^4.0.0
@@ -14102,13 +14162,13 @@ packages:
         optional: true
     dependencies:
       '@better-auth/utils': 0.3.1
-      '@better-fetch/fetch': 1.1.21
+      '@better-fetch/fetch': 1.3.2
       rou3: 0.7.12
       set-cookie-parser: 3.0.1
-      zod: 4.3.6
+      zod: 4.6.7
     dev: false
 
-  /better-call@1.3.5(zod@4.6.5):
+  /better-call@1.3.5(zod@4.6.7):
     resolution: {integrity: sha512-kOFJkBP7utAQLEYrobZm3vkTH8mXq5GNgvjc5/XEST1ilVHaxXUXfeDeFlqoETMtyqS4+3/h4ONX2i++ebZrvA==}
     peerDependencies:
       zod: ^4.0.0
@@ -14120,10 +14180,10 @@ packages:
       '@better-fetch/fetch': 1.3.2
       rou3: 0.7.12
       set-cookie-parser: 3.1.2
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
-  /better-call@1.4.0(zod@4.6.5):
+  /better-call@1.4.0(zod@4.6.7):
     resolution: {integrity: sha512-bBKOT4vv1kZLDgxVePdilk/Jwkn+dtRRsmi3DzHcDP+WnswyVl6dR59l2HEeP/0cB+bDoopASAesWDPIdd/zZA==}
     peerDependencies:
       zod: ^4.0.0
@@ -14135,7 +14195,7 @@ packages:
       '@better-fetch/fetch': 1.3.2
       rou3: 0.9.2
       set-cookie-parser: 3.1.2
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
   /better-sqlite3@12.8.0:
@@ -14659,7 +14719,7 @@ packages:
   /convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
-  /convex-helpers@0.1.129(convex@1.48.0)(react@19.2.8)(typescript@5.9.3)(zod@4.6.5):
+  /convex-helpers@0.1.129(convex@1.48.0)(react@19.2.8)(typescript@5.9.3)(zod@4.6.7):
     resolution: {integrity: sha512-8QJLbym0fKsf3tYcF2ZTX37NeYt/BkOFBjBwB2LR1fXUAajeYaTLV11gi/0IVOU/jCdH2j/VseHhHid1qQcqFw==}
     hasBin: true
     peerDependencies:
@@ -14684,7 +14744,7 @@ packages:
       convex: 1.48.0(react@19.2.8)
       react: 19.2.8
       typescript: 5.9.3
-      zod: 4.6.5
+      zod: 4.6.7
     dev: false
 
   /convex@1.48.0(react@19.2.8):
@@ -16049,7 +16109,7 @@ packages:
         optional: true
     dependencies:
       '@opentelemetry/api': 1.9.1
-      ai: 7.0.30(zod@4.6.5)
+      ai: 7.0.30(zod@4.6.7)
       nitro: 3.0.260610-beta(miniflare@4.20260710.0)(vite@8.3.4)
     transitivePeerDependencies:
       - '@azure/app-configuration'
@@ -16518,7 +16578,7 @@ packages:
     requiresBuild: true
     optional: true
 
-  /fumadocs-core@16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.5):
+  /fumadocs-core@16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.7):
     resolution: {integrity: sha512-zquUMPZaCEdsxFZ6ReZPzVN2yCP9tS3GZRndK0WtxbsvZ9KvvUDCeoLIpOZ6d3JU0uwSsclaIUGxI5ifvTftOQ==}
     peerDependencies:
       '@mdx-js/mdx': '*'
@@ -16609,7 +16669,7 @@ packages:
       vfile: 6.0.3
       yaml: 2.9.1
       zbsearch: 4.0.1
-      zod: 4.6.5
+      zod: 4.6.7
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -16735,7 +16795,7 @@ packages:
       '@types/react': 18.3.26
       class-variance-authority: 0.7.1
       cn: 0.4.0
-      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.5)
+      fumadocs-core: 16.17.1(@mdx-js/mdx@3.1.1)(@types/react@18.3.26)(lucide-react@1.23.0)(next@16.2.4)(react-dom@19.2.8)(react@19.2.8)(supports-color@10.2.2)(zod@4.6.7)
       hast-util-to-jsx-runtime: 2.3.6(supports-color@10.2.2)
       lucide-react: 1.59.0(@types/react@18.3.26)(react@19.2.8)
       motion: 14.3.0(react-dom@19.2.8)(react@19.2.8)
@@ -17287,7 +17347,7 @@ packages:
     resolution: {integrity: sha512-1TJ6Fih/b8h5TIcv+1+Hw0PDQWJTKDKzFZzcKOiW1wJza3XoAQlkCuXLbymPYB8+ZQyw8mHvdw560e8zVFIWyA==}
     dependencies:
       '@types/set-cookie-parser': 2.4.10
-      set-cookie-parser: 3.0.1
+      set-cookie-parser: 3.1.2
 
   /hex-rgb@4.3.0:
     resolution: {integrity: sha512-Ox1pJVrDCyGHMG9CFg1tmrRUMRPRsAWYc/PinY0XzJU4K7y7vjNoLKIQ7BR5UJMCxNN8EM1MNDmHWA/B3aZUuw==}
@@ -18833,15 +18893,6 @@ packages:
       micromark-util-symbol: 2.0.1
       micromark-util-types: 2.0.2
 
-  /micromark-extension-gfm-table@2.1.1:
-    resolution: {integrity: sha512-t2OU/dXXioARrC6yWfJ4hqB7rct14e8f7m0cbI5hUmDyyIlwv5vEtooptH8INkbLzOatzKuVbQmAYcbWoyz6Dg==}
-    dependencies:
-      devlop: 1.1.0
-      micromark-factory-space: 2.0.1
-      micromark-util-character: 2.1.1
-      micromark-util-symbol: 2.0.1
-      micromark-util-types: 2.0.2
-
   /micromark-extension-gfm-table@2.1.2:
     resolution: {integrity: sha512-pRzm4kDTu0MjlmBkxmS9yYhw60nncfcEwu9NNdPFSQEFXS95ZKyIIyTSHu/o3ReBUrLKYEq+7YaXCRn/bPB4MA==}
     dependencies:
@@ -18850,7 +18901,6 @@ packages:
       micromark-util-character: 2.1.1
       micromark-util-symbol: 2.0.1
       micromark-util-types: 2.0.2
-    dev: false
 
   /micromark-extension-gfm-tagfilter@2.0.0:
     resolution: {integrity: sha512-xHlTOmuCSotIA8TW1mDIM6X2O1SiX5P9IuDtqGonFhEK0qgRI4yeC6vMxEV2dgyr2TiD+2PQ10o+cOhdVAcwfg==}
@@ -18872,7 +18922,7 @@ packages:
       micromark-extension-gfm-autolink-literal: 2.1.0
       micromark-extension-gfm-footnote: 2.1.0
       micromark-extension-gfm-strikethrough: 2.1.0
-      micromark-extension-gfm-table: 2.1.1
+      micromark-extension-gfm-table: 2.1.2
       micromark-extension-gfm-tagfilter: 2.0.0
       micromark-extension-gfm-task-list-item: 2.1.0
       micromark-util-combine-extensions: 2.0.1
@@ -19508,7 +19558,7 @@ packages:
       ocache: 0.1.5
       ofetch: 2.0.0-alpha.3
       ohash: 2.0.11
-      rolldown: 1.2.14
+      rolldown: 1.2.15
       srvx: 0.11.22
       unenv: 2.0.0-rc.24
       unstorage: 2.0.0-alpha.7(db0@0.3.4)(ofetch@2.0.0-alpha.3)
@@ -20197,7 +20247,7 @@ packages:
     resolution: {integrity: sha512-udgsAY+fTnvv7kI7aaxbqwWNb0AHiB0qBO89PZKPkoTmGOgdbrHDKD+0B2X4uTfJ/FT1R09r9gTsjUjNJotuog==}
     engines: {node: '>=0.10.0'}
 
-  /pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@5.9.3)(vue@3.5.41):
+  /pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@5.9.3)(vue@3.5.44):
     resolution: {integrity: sha512-XMQqpvjgG7LMqVhhFUzKLT4KEbsYbfZZ0CZU9PgdFm1O2VKBmIkykL8+SfNhOaT7sR0wT6BEgKT0YNDYWgmVRA==}
     peerDependencies:
       '@vue/devtools-api': ^8.1.5
@@ -20210,7 +20260,7 @@ packages:
       '@vue/devtools-api': 8.2.1
       nostics: 1.3.0
       typescript: 5.9.3
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.44(typescript@5.9.3)
     dev: false
 
   /pirates@4.0.7:
@@ -21077,8 +21127,8 @@ packages:
       - supports-color
     dev: false
 
-  /remeda@2.53.0:
-    resolution: {integrity: sha512-1jeHr8AUMB3r089AOmaiHBPAcGTep27JCbMt8MeXXXquDkO3h2N4CtuK++4Oas8mulCUiOUDeZqN+ssrcatKlw==}
+  /remeda@2.54.1:
+    resolution: {integrity: sha512-l3pxw2Hz5V2FG3RaU9C6z121H8dF5VYjj3z6lnHoN3SCRLoxr+pZS2dq8dDe3NA+9kyKm56A1BB2Ejr+DrLlJw==}
     engines: {node: '>=18.0.0'}
     dev: false
 
@@ -21518,10 +21568,10 @@ packages:
 
   /set-cookie-parser@3.0.1:
     resolution: {integrity: sha512-n7Z7dXZhJbwuAHhNzkTti6Aw9QDDjZtm3JTpTGATIdNzdQz5GuFs22w90BcvF4INfnrL5xrX3oGsuqO5Dx3A1Q==}
+    dev: false
 
   /set-cookie-parser@3.1.2:
     resolution: {integrity: sha512-5/r/lTwbJ3zQ+qwdUFZYeRNqda7P5HD8zQKqlSjdGt1/S0cjLAphHusj4Y58ahDtWn/g32xrIS58/ikOvwl0Lw==}
-    dev: false
 
   /set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -23323,7 +23373,7 @@ packages:
       lightningcss: 1.33.0
       picomatch: 4.0.7
       postcss: 8.5.30
-      rolldown: 1.2.15
+      rolldown: 1.2.14
       tinyglobby: 0.2.17
     optionalDependencies:
       fsevents: 2.3.3
@@ -23376,7 +23426,7 @@ packages:
       lightningcss: 1.33.0
       picomatch: 4.0.7
       postcss: 8.5.30
-      rolldown: 1.2.15
+      rolldown: 1.2.14
       tinyglobby: 0.2.17
     optionalDependencies:
       fsevents: 2.3.3
@@ -23429,7 +23479,7 @@ packages:
       lightningcss: 1.33.0
       picomatch: 4.0.7
       postcss: 8.5.30
-      rolldown: 1.2.15
+      rolldown: 1.2.14
       tinyglobby: 0.2.17
     optionalDependencies:
       fsevents: 2.3.3
@@ -23481,7 +23531,7 @@ packages:
       lightningcss: 1.33.0
       picomatch: 4.0.7
       postcss: 8.5.30
-      rolldown: 1.2.15
+      rolldown: 1.2.14
       tinyglobby: 0.2.17
       yaml: 2.9.0
     optionalDependencies:
@@ -23635,19 +23685,19 @@ packages:
       typescript: 5.9.3
     dev: true
 
-  /vue@3.5.41(typescript@5.9.3):
-    resolution: {integrity: sha512-2laE0p+aK+/AOPG/XL/WepOs/GlK755LJ1XECi9kDUrz1FKNw8rb2Xzlw9JS1rqEV55nb0ttsKxVlTCcd+R5cg==}
+  /vue@3.5.44(typescript@5.9.3):
+    resolution: {integrity: sha512-dvvmaOCG7lAMkJTPqPwWeGMsPS6DIsFsfZDUgBp9V6mHf9b3+/wyVwYR4Es+WV6uJC0FKRxp81Obcq0ZwUcGFQ==}
     peerDependencies:
       typescript: '*'
     peerDependenciesMeta:
       typescript:
         optional: true
     dependencies:
-      '@vue/compiler-dom': 3.5.41
-      '@vue/compiler-sfc': 3.5.41
-      '@vue/runtime-dom': 3.5.41
-      '@vue/server-renderer': 3.5.41
-      '@vue/shared': 3.5.41
+      '@vue/compiler-dom': 3.5.44
+      '@vue/compiler-sfc': 3.5.44
+      '@vue/runtime-dom': 3.5.44
+      '@vue/server-renderer': 3.5.44
+      '@vue/shared': 3.5.44
       typescript: 5.9.3
 
   /w3c-xmlserializer@5.0.0:
@@ -24092,12 +24142,12 @@ packages:
       readable-stream: 4.7.0
     dev: true
 
-  /zod-to-json-schema@3.25.2(zod@4.6.5):
+  /zod-to-json-schema@3.25.2(zod@4.6.7):
     resolution: {integrity: sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==}
     peerDependencies:
       zod: ^3.25.28 || ^4
     dependencies:
-      zod: 4.6.5
+      zod: 4.6.7
 
   /zod@3.24.1:
     resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
@@ -24113,9 +24163,10 @@ packages:
 
   /zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+    dev: false
 
-  /zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+  /zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
