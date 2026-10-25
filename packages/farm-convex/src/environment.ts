@@ -59,7 +59,8 @@ function resolveURL(input: ConvexIntegrationInput): URL {
 }
 
 function resolveSiteURL(input: ConvexIntegrationInput, url: URL): string {
-  const rawSiteURL = input.siteURL ?? readEnvironmentValue(SITE_URL_ENVIRONMENT_NAMES) ?? deriveSiteURL(url);
+  const rawSiteURL =
+    input.siteURL ?? readEnvironmentValue(SITE_URL_ENVIRONMENT_NAMES) ?? deriveSiteURL(url);
   if (!rawSiteURL) {
     throw new Error(
       "Convex integration could not work out CONVEX_SITE_URL from CONVEX_URL. Set CONVEX_SITE_URL to your deployment's HTTP actions URL, or pass convex({ siteURL }).",

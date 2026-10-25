@@ -17,7 +17,6 @@ export default defineConfig({
     "packages/farm-cf-agent/package.json",
     "packages/farm-clerk/package.json",
     "packages/farm-contentful/package.json",
-    "packages/farm-convex/package.json",
     "packages/farm-cli/package.json",
     "packages/farm-devtools/package.json",
     "packages/farm-email/package.json",

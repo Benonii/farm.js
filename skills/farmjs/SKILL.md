@@ -349,8 +349,9 @@ farm add integration jobs-trigger
 ```
 
 Current integration families include AI, Stripe, Autumn, Polar, Resend, Trigger.dev, Inngest,
-Unkey, Cloudflare agents, Eve, Auth0, Auth.js, Better Auth, Clerk, Supabase, WorkOS, custom
-integrations, UI registries, and ORM-backed data.
+Unkey, Cloudflare agents, Eve, Auth0, Auth.js, Better Auth, Clerk, Supabase, WorkOS, Convex
+(`@farm.js/convex`, installed with `pnpm add`, not `farm add`), custom integrations, UI
+registries, and ORM-backed data.
 
 Provider adapters support two ownership modes: pass credentials so the adapter constructs its
 default SDK, or pass an app-owned vendor client through `instance`. Keep the vendor instance in a
