@@ -6173,7 +6173,7 @@ ${nativeMCP.importSource}
   const imageRuntimeImport =
     imageRuntime === "none"
       ? ""
-      : `import { createCloudflareImageTransformer, createFarmImageHandler } from "@farm.js/core/image/server";`;
+      : `import { _withFarmImageSourceClientAddress, createCloudflareImageTransformer, createFarmImageHandler } from "@farm.js/core/image/server";`;
   const imageNodeRuntimeImport =
     imageRuntime === "node"
       ? `import { createNodeImageFetcher, createNodeImageUrlValidator, createSharpImageTransformer } from "@farm.js/core/image/sharp";`
@@ -10176,7 +10176,13 @@ async function handleFarmPluginRequest(request, runtimeOptions, adapterContext) 
 ${generatePreloadResponseRuntimeSource()}
 
 // Export as Web Standard fetch API
-export async function fetch(request, context) {
+export async function fetch(request, context) {${
+    imageRuntime === "none"
+      ? ""
+      : `
+  // The image optimizer's fetch of a local source is not a loopback visitor.
+  context = _withFarmImageSourceClientAddress(request, context);`
+  }
   ${config.agent?.noindexPreviews ? "const response = await" : "return"} _runWithAPIRequestRuntime({
     basePath: farmLocalAPIBasePath,
     dispatch: async (localRequest) =>
