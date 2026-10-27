@@ -3,7 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { betterAuth } from "../better-auth.js";
 import { component } from "../component.js";
 import { convex } from "../index.js";
+import { autumn } from "../autumn.js";
 import { polar } from "../polar.js";
+import { resend } from "../resend.js";
+import { stripe } from "../stripe.js";
+import { workosAuthKit } from "../workos.js";
 import { readConvexRuntime } from "../runtime.js";
 import { startRecordingServer } from "./recording-server.js";
 
@@ -139,5 +143,34 @@ describe("component()", () => {
 
   it("needs a package name", () => {
     expect(() => component(" ")).toThrow(/package name/);
+  });
+});
+
+describe("service helpers", () => {
+  it.each([
+    ["polar", polar, "@convex-dev/polar", "billing", "/polar/events"],
+    ["stripe", stripe, "@convex-dev/stripe", "billing", "/stripe/webhook"],
+    ["resend", resend, "@convex-dev/resend", undefined, "/resend-webhook"],
+    ["workosAuthKit", workosAuthKit, "@convex-dev/workos-authkit", "auth", "/workos/webhook"],
+  ] as const)(
+    "%s forwards webhooks to the component's default path",
+    (name, helper, pkg, owns, to) => {
+      expect(helper()).toMatchObject({ name, component: pkg, owns, routes: [] });
+      expect(helper({ webhooks: "/api/webhooks/x" }).routes).toEqual([
+        { path: "/api/webhooks/x", methods: ["POST"], to },
+      ]);
+      expect(helper({ webhooks: "/api/webhooks/x", convexPath: "/custom" }).routes?.[0]?.to).toBe(
+        "/custom",
+      );
+    },
+  );
+
+  it("autumn marks billing as Convex-owned with nothing to forward", () => {
+    expect(autumn()).toEqual({
+      name: "autumn",
+      owns: "billing",
+      component: "@useautumn/convex",
+      routes: [],
+    });
   });
 });

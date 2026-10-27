@@ -1,4 +1,5 @@
 import type { ConvexComponentOptions, ConvexExtension, ConvexExtensionRoute } from "./types.js";
+import type { ConvexWebhookOptions, ConvexWebhookService } from "./types.js";
 
 function toRoutes(routes: ConvexComponentOptions["routes"]): readonly ConvexExtensionRoute[] {
   if (!routes) return [];
@@ -18,4 +19,17 @@ export function component(
     component: packageName,
     routes: toRoutes(routes),
   };
+}
+
+/** A component whose webhooks can arrive on your own domain and go on to Convex. */
+export function webhookComponent(
+  service: ConvexWebhookService,
+  options: ConvexWebhookOptions = {},
+): ConvexExtension {
+  const to = options.convexPath ?? service.defaultConvexPath;
+  return component(service.component, {
+    name: service.name,
+    owns: service.owns,
+    routes: options.webhooks ? [{ path: options.webhooks, methods: ["POST"], to }] : [],
+  });
 }

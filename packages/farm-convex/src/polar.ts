@@ -1,17 +1,18 @@
-import { component } from "./component.js";
+import { webhookComponent } from "./component.js";
 
-import type { ConvexExtension, ConvexPolarOptions } from "./types.js";
-
-const DEFAULT_CONVEX_PATH = "/polar/events";
+import type { ConvexExtension, ConvexWebhookOptions } from "./types.js";
 
 /** Polar running in Convex as the @convex-dev/polar component. */
-export function polar(options: ConvexPolarOptions = {}): ConvexExtension {
-  const convexPath = options.convexPath ?? DEFAULT_CONVEX_PATH;
-  return component("@convex-dev/polar", {
-    name: "polar",
-    owns: "billing",
-    routes: options.webhooks ? [{ path: options.webhooks, methods: ["POST"], to: convexPath }] : [],
-  });
+export function polar(options: ConvexWebhookOptions = {}): ConvexExtension {
+  return webhookComponent(
+    {
+      name: "polar",
+      component: "@convex-dev/polar",
+      owns: "billing",
+      defaultConvexPath: "/polar/events",
+    },
+    options,
+  );
 }
 
-export type { ConvexPolarOptions } from "./types.js";
+export type { ConvexWebhookOptions } from "./types.js";

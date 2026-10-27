@@ -122,11 +122,19 @@ export interface ConvexComponentOptions extends Omit<
   routes?: Readonly<Record<string, string>> | readonly ConvexExtensionRoute[];
 }
 
-export interface ConvexPolarOptions {
-  /** Path on your domain that receives Polar's webhooks and forwards them to Convex. */
+/** Options for a service whose webhooks Farm can receive on your own domain. */
+export interface ConvexWebhookOptions {
+  /** Path on your domain that receives the service's webhooks and forwards them to Convex. */
   webhooks?: string;
-  /** Path passed to polar.registerRoutes(http) in Convex. @default "/polar/events" */
+  /** The webhook path the component registers in convex/http.ts, if you changed its default. */
   convexPath?: string;
+}
+
+export interface ConvexWebhookService {
+  name: string;
+  component: string;
+  owns?: ConvexService;
+  defaultConvexPath: string;
 }
 
 export interface ConvexAdapterOptions {

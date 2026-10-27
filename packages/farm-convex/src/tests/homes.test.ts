@@ -6,6 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 import { betterAuth } from "../better-auth.js";
 import { checkServiceHomes, findConvexComponents, findFarmIntegrations } from "../homes.js";
 import { polar } from "../polar.js";
+import { stripe } from "../stripe.js";
+import { workosAuthKit } from "../workos.js";
 
 const POLAR_AND_BETTER_AUTH_CONFIG = `import { defineApp } from "convex/server";
 import betterAuth from "@convex-dev/better-auth/convex.config";
@@ -105,6 +107,22 @@ describe("checkServiceHomes", () => {
     const integrations = { auth: { type: "better-auth" } };
     expect(() => checkServiceHomes({ root, integrations }, "convex", {}, [betterAuth()])).toThrow(
       /auth is set up in Convex \(@convex-dev\/better-auth\) and in Farm \(better-auth\)/,
+    );
+  });
+
+  it("lets WorkOS AuthKit in Convex run with Farm's WorkOS sign-in", () => {
+    const root = createAppRoot(`import authKit from "@convex-dev/workos-authkit/convex.config";\n`);
+    const integrations = { auth: { type: "workos" } };
+    expect(() =>
+      checkServiceHomes({ root, integrations }, "convex", {}, [workosAuthKit()]),
+    ).not.toThrow();
+  });
+
+  it("stops when Stripe lives in Convex and Farm's stripe() is registered too", () => {
+    const root = createAppRoot(`import stripe from "@convex-dev/stripe/convex.config";\n`);
+    const integrations = { billing: { type: "stripe" } };
+    expect(() => checkServiceHomes({ root, integrations }, "convex", {}, [stripe()])).toThrow(
+      /billing is set up in Convex \(@convex-dev\/stripe\) and in Farm \(stripe\)/,
     );
   });
 

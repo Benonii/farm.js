@@ -152,11 +152,32 @@ export default defineConfig({
 });
 ```
 
-| Extension                                         | Convex component          | What Farm adds                                                          |
-| ------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
-| `betterAuth()` from `@farm.js/convex/better-auth` | `@convex-dev/better-auth` | `/api/auth/*` on your domain, the visitor's token, the browser provider |
-| `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`       | An optional webhook route on your domain                                |
-| `component(name, options)` from `@farm.js/convex` | Any component             | Whatever you pass: routes, ownership, token, provider                   |
+| Extension                                         | Convex component             | What Farm adds                                                               |
+| ------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| `betterAuth()` from `@farm.js/convex/better-auth` | `@convex-dev/better-auth`    | `/api/auth/*` on your domain, the visitor's token, the browser provider      |
+| `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`          | Owns billing; optional webhook route forwarded to `/polar/events`            |
+| `stripe()` from `@farm.js/convex/stripe`          | `@convex-dev/stripe`         | Owns billing; optional webhook route forwarded to `/stripe/webhook`          |
+| `autumn()` from `@farm.js/convex/autumn`          | `@useautumn/convex`          | Owns billing                                                                 |
+| `resend()` from `@farm.js/convex/resend`          | `@convex-dev/resend`         | Optional webhook route forwarded to `/resend-webhook`                        |
+| `workosAuthKit()` from `@farm.js/convex/workos`   | `@convex-dev/workos-authkit` | Optional webhook route forwarded to `/workos/webhook`; works with `workos()` |
+| `component(name, options)` from `@farm.js/convex` | Any component                | Whatever you pass: routes, ownership, token, provider                        |
+
+Every helper with a webhook takes the same two options: `webhooks`, the path on your domain to
+give the provider's dashboard, and `convexPath`, if you registered the component's route somewhere
+other than its default:
+
+```ts
+convex({
+  use: [
+    betterAuth(),
+    stripe({ webhooks: "/api/webhooks/stripe" }),
+    resend({ webhooks: "/api/webhooks/resend" }),
+  ],
+});
+```
+
+The body and signature headers reach Convex unchanged, so each component verifies its webhooks as
+usual. Without `webhooks`, point the provider at your `.convex.site` URL directly.
 
 Each service can have only one owner. Two extensions that own the same service, or an extension
 next to a Farm integration for the same service, stop `farm dev` and `farm build` with an error.
@@ -244,7 +265,8 @@ signature headers reach Convex unchanged, so the component verifies them as usua
 registered the component's routes on a custom path, pass it as `convexPath`. Without `webhooks`,
 point Pol### Add any other Convex component
 
-`component()` wires any Convex component into Farm without writing an extension. Name its package,
+For a component without a helper above, `component()` wires it into Farm without writing an
+extension. Name its package,
 then map paths on your domain to the routes the component registers in `convex/http.ts`:
 
 ```ts

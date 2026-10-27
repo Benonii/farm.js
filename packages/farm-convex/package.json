@@ -45,6 +45,22 @@
       "types": "./dist/polar.d.ts",
       "import": "./dist/polar.js"
     },
+    "./stripe": {
+      "types": "./dist/stripe.d.ts",
+      "import": "./dist/stripe.js"
+    },
+    "./autumn": {
+      "types": "./dist/autumn.d.ts",
+      "import": "./dist/autumn.js"
+    },
+    "./resend": {
+      "types": "./dist/resend.d.ts",
+      "import": "./dist/resend.js"
+    },
+    "./workos": {
+      "types": "./dist/workos.d.ts",
+      "import": "./dist/workos.js"
+    },
     "./functions": {
       "types": "./dist/functions.d.ts",
       "import": "./dist/functions.js"

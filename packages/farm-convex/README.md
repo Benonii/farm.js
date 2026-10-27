@@ -59,7 +59,9 @@ convex({
 });
 ```
 
-Extensions wire services that live in Convex into Farm: routes on your own domain, the visitor's
+Helpers exist for `betterAuth`, `polar`, `stripe`, `autumn`, `resend`, and `workosAuthKit`
+(`@farm.js/convex/better-auth`, `/polar`, `/stripe`, `/autumn`, `/resend`, `/workos`). Extensions
+wire services that live in Convex into Farm: routes on your own domain, the visitor's
 token, and the browser provider. See the
 [Convex integration docs](https://farmjs.dev/docs/integrations/convex) for writing your own
 extension, the `home` option, and the rate-limit and KV adapters.

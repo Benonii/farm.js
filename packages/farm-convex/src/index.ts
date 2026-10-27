@@ -48,6 +48,7 @@ export { CONVEX_PAIRS } from "./pairs.js";
 export type {
   ConvexAdapterOptions,
   ConvexComponentOptions,
+  ConvexWebhookOptions,
   ConvexDevOptions,
   ConvexExtension,
   ConvexExtensionRoute,
