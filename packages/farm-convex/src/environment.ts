@@ -7,6 +7,10 @@ const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "0.0.0.0"]);
 const URL_ENVIRONMENT_NAMES = ["CONVEX_URL", "VITE_CONVEX_URL"];
 const SITE_URL_ENVIRONMENT_NAMES = ["CONVEX_SITE_URL", "VITE_CONVEX_SITE_URL"];
 
+export function hasDeploymentURL(input: ConvexIntegrationInput): boolean {
+  return Boolean(input.url ?? readEnvironmentValue(URL_ENVIRONMENT_NAMES));
+}
+
 export function readEnvironmentValue(names: readonly string[]): string | undefined {
   return names.map((name) => process.env[name]?.trim()).find((value) => Boolean(value));
 }

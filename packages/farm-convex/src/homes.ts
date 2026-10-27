@@ -11,11 +11,18 @@ const COMPONENT_IMPORT_PATTERN =
   /from\s+["']((?:@[\w.-]+\/)?[\w.-]+)\/convex\.config(?:\.js)?["']/g;
 const CONFIG_FILE_NAMES = ["convex.config.ts", "convex.config.js"];
 
-function readConvexConfigSource(root: string, functionsDirectory: string): string | undefined {
+export function readConvexConfigSource(
+  root: string,
+  functionsDirectory: string,
+): string | undefined {
   const filePath = CONFIG_FILE_NAMES.map((name) => path.join(root, functionsDirectory, name)).find(
     (candidate) => existsSync(candidate),
   );
   return filePath ? readFileSync(filePath, "utf8") : undefined;
+}
+
+export function findComponentPackages(source: string): string[] {
+  return [...source.matchAll(COMPONENT_IMPORT_PATTERN)].map((match) => match[1]);
 }
 
 export function findConvexComponents(source: string): ConvexServiceSetup[] {
@@ -45,8 +52,9 @@ function mergeConvexServices(
 function warnMissingComponents(source: string, extensions: readonly ConvexExtension[]): void {
   for (const { name, component } of extensions) {
     if (!component || source.includes(`${component}/convex.config`)) continue;
+    const listed = name === component ? component : `${name} (${component})`;
     console.warn(
-      `[farm:convex] ${component} is not in convex.config.ts, but convex({ use }) has ${name}. Add app.use() for it there.`,
+      `[farm:convex] ${listed} is in convex({ use }) but not in convex.config.ts. Add app.use() for it there.`,
     );
   }
 }

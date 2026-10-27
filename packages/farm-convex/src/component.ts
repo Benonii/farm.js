@@ -27,9 +27,10 @@ export function webhookComponent(
   options: ConvexWebhookOptions = {},
 ): ConvexExtension {
   const to = options.convexPath ?? service.defaultConvexPath;
+  const path = options.webhooks === true ? service.defaultWebhookPath : options.webhooks;
   return component(service.component, {
     name: service.name,
     owns: service.owns,
-    routes: options.webhooks ? [{ path: options.webhooks, methods: ["POST"], to }] : [],
+    routes: path ? [{ path, methods: ["POST"], to }] : [],
   });
 }

@@ -7,7 +7,7 @@ import { requireConvexRuntime } from "./runtime.js";
 
 import type { Preloaded } from "convex/react";
 import type { ArgsAndOptions, FunctionReference, FunctionReturnType } from "convex/server";
-import type { ConvexServerOptions } from "./types.js";
+import type { ConvexRuntime, ConvexServerOptions } from "./types.js";
 
 const MISSING_REQUEST_MESSAGE = "No current request is available";
 
@@ -28,12 +28,27 @@ function keepPageOutOfSharedCache(): void {
   readCurrentRequest();
 }
 
+// A page that runs several queries reads the visitor's token once.
+const tokensByRequest = new WeakMap<Request, Promise<string | undefined>>();
+
+async function readRequestToken(
+  reader: NonNullable<ConvexRuntime["token"]>,
+  request: Request,
+): Promise<string | undefined> {
+  let token = tokensByRequest.get(request);
+  if (!token) {
+    token = Promise.resolve(reader(request)).then((value) => value ?? undefined);
+    tokensByRequest.set(request, token);
+  }
+  return token;
+}
+
 async function resolveToken(options: ConvexServerOptions): Promise<string | undefined> {
   if (options.token !== undefined) return options.token;
   const runtime = requireConvexRuntime();
   const request = options.request ?? readCurrentRequest();
   if (!runtime.token || !request) return undefined;
-  return (await runtime.token(request)) ?? undefined;
+  return readRequestToken(runtime.token, request);
 }
 
 export async function createConvexServerClient(

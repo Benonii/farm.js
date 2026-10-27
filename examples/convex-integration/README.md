@@ -4,8 +4,9 @@ A small Farm app on [Convex](https://convex.dev) that uses every part of `@farm.
 
 - `convex()` wraps the app in a Convex provider and starts `convex dev` with `farm dev`.
 - The home page preloads messages on the server with `preloadQuery`, then keeps them live.
-- Better Auth runs inside Convex. `convex({ use: [betterAuth()] })` forwards `/api/auth/*` to it,
-  so sign-in is same-site and `/account` knows the user during server rendering.
+- Better Auth runs inside Convex. `convex()` finds it in `convex/convex.config.ts` and forwards
+  `/api/auth/*` to it, so sign-in is same-site and `/account` knows the user during server
+  rendering.
 - `/api/notes` stores values through `convexStorage()`, and `/api/*` is rate limited with
   `convexRateLimitStorage()`.
 
@@ -16,8 +17,9 @@ pnpm install
 pnpm dev
 ```
 
-The first `farm dev` asks `convex dev` to create a deployment. For a free local one with no
-account, run `CONVEX_AGENT_MODE=anonymous npx convex dev` once instead.
+The first `farm dev` starts `convex dev`, which creates a deployment and writes it to
+`.env.local`; restart `farm dev` when Farm says the deployment is ready. For a free local one with
+no account, set `CONVEX_AGENT_MODE=anonymous` for that first run.
 
 Then set the server secrets on the deployment:
 

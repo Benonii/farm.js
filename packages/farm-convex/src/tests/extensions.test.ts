@@ -146,6 +146,23 @@ describe("component()", () => {
   });
 });
 
+describe("@farm.js/convex", () => {
+  it("exports every helper next to convex()", async () => {
+    const entry: Record<string, unknown> = await import("../index.js");
+    for (const name of [
+      "betterAuth",
+      "polar",
+      "stripe",
+      "autumn",
+      "resend",
+      "workosAuthKit",
+      "component",
+    ]) {
+      expect(entry[name]).toBeTypeOf("function");
+    }
+  });
+});
+
 describe("service helpers", () => {
   it.each([
     ["polar", polar, "@convex-dev/polar", "billing", "/polar/events"],
@@ -162,6 +179,8 @@ describe("service helpers", () => {
       expect(helper({ webhooks: "/api/webhooks/x", convexPath: "/custom" }).routes?.[0]?.to).toBe(
         "/custom",
       );
+      const slug = name === "workosAuthKit" ? "workos" : name;
+      expect(helper({ webhooks: true }).routes?.[0]?.path).toBe(`/api/webhooks/${slug}`);
     },
   );
 

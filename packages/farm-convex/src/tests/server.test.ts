@@ -69,6 +69,26 @@ describe("Convex server helpers", () => {
     expect(requests).toHaveLength(20);
   });
 
+  it("reads the visitor's token once per request, however many queries the page runs", async () => {
+    let reads = 0;
+    setConvexRuntime({
+      url: convexBackend.url,
+      siteURL: convexBackend.url,
+      token: (request) => {
+        reads += 1;
+        return TOKENS_BY_COOKIE[request.headers.get("cookie") ?? ""];
+      },
+    });
+    const request = new Request("https://app.example.com/", { headers: { cookie: "session=ada" } });
+    await Promise.all([
+      fetchQuery(anyApi.page.header, {}, { request }),
+      fetchQuery(anyApi.page.body, {}, { request }),
+      preloadQuery(anyApi.page.footer, {}, { request }),
+    ]);
+    expect(reads).toBe(1);
+    expect(readAuthorization(convexBackend, "page:body")).toEqual(["Bearer token-for-ada"]);
+  });
+
   it("sends no token for a signed-out visitor", async () => {
     await fetchMutation(
       anyApi.visits.record,

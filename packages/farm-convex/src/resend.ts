@@ -9,6 +9,7 @@ export function resend(options: ConvexWebhookOptions = {}): ConvexExtension {
       name: "resend",
       component: "@convex-dev/resend",
       defaultConvexPath: "/resend-webhook",
+      defaultWebhookPath: "/api/webhooks/resend",
     },
     options,
   );

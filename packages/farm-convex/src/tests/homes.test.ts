@@ -131,7 +131,9 @@ describe("checkServiceHomes", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     checkServiceHomes({ root, integrations: {} }, "convex", {}, [polar()]);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("@convex-dev/polar is not in convex.config.ts"),
+      expect.stringContaining(
+        "polar (@convex-dev/polar) is in convex({ use }) but not in convex.config.ts",
+      ),
     );
     warn.mockRestore();
   });

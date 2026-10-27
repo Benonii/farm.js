@@ -42,26 +42,23 @@ export default async function HomePage() {
 
 Pages that preload Convex data are kept out of Farm's shared page cache.
 
-## Auth and billing in Convex
+## Auth, billing and other services in Convex
+
+`convex()` reads `convex/convex.config.ts` and turns on the helper for each component it knows:
+`@convex-dev/better-auth`, `@convex-dev/polar`, `@convex-dev/stripe`, `@useautumn/convex`,
+`@convex-dev/resend` and `@convex-dev/workos-authkit`. List a helper in `use` to change its
+options; it replaces the detected one.
 
 ```ts
-import { component, convex } from "@farm.js/convex";
-import { betterAuth } from "@farm.js/convex/better-auth";
-import { polar } from "@farm.js/convex/polar";
+import { component, convex, stripe } from "@farm.js/convex";
 
 convex({
   use: [
-    betterAuth(),
-    polar({ webhooks: "/api/webhooks/polar" }),
-    // any other component: map paths on your domain to its Convex routes
-    component("@convex-dev/resend", { routes: { "/api/webhooks/resend": "/resend-webhook" } }),
+    stripe({ webhooks: true }), // /api/webhooks/stripe on your domain
+    component("@convex-dev/resend", { routes: { "/api/hooks/email": "/resend-webhook" } }),
   ],
 });
 ```
 
-Helpers exist for `betterAuth`, `polar`, `stripe`, `autumn`, `resend`, and `workosAuthKit`
-(`@farm.js/convex/better-auth`, `/polar`, `/stripe`, `/autumn`, `/resend`, `/workos`). Extensions
-wire services that live in Convex into Farm: routes on your own domain, the visitor's
-token, and the browser provider. See the
-[Convex integration docs](https://farmjs.dev/docs/integrations/convex) for writing your own
+See the [Convex integration docs](https://farmjs.dev/docs/integrations/convex) for writing your own
 extension, the `home` option, and the rate-limit and KV adapters.

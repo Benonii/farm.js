@@ -33,6 +33,8 @@ export interface ConvexIntegrationInput {
   functionsDirectory?: string;
   log?: FarmIntegrationLogger;
   use?: readonly ConvexExtension[];
+  /** Turn on helpers for the components in convex.config.ts. @default true */
+  detect?: boolean;
 }
 
 /** A route on the app's own domain that Farm forwards to the Convex site URL. */
@@ -124,8 +126,11 @@ export interface ConvexComponentOptions extends Omit<
 
 /** Options for a service whose webhooks Farm can receive on your own domain. */
 export interface ConvexWebhookOptions {
-  /** Path on your domain that receives the service's webhooks and forwards them to Convex. */
-  webhooks?: string;
+  /**
+   * Path on your domain that receives the service's webhooks and forwards them to Convex.
+   * `true` uses /api/webhooks/<service>.
+   */
+  webhooks?: string | true;
   /** The webhook path the component registers in convex/http.ts, if you changed its default. */
   convexPath?: string;
 }
@@ -135,6 +140,7 @@ export interface ConvexWebhookService {
   component: string;
   owns?: ConvexService;
   defaultConvexPath: string;
+  defaultWebhookPath: string;
 }
 
 export interface ConvexAdapterOptions {
@@ -165,6 +171,8 @@ export interface ConvexPluginInput {
   homes: ConvexHomes;
   functionsDirectory: string;
   extensions: readonly ConvexExtension[];
+  /** No deployment yet: farm dev runs convex dev to create one. */
+  waitingForDeployment?: boolean;
 }
 
 export interface ConvexKeyPrefixer {

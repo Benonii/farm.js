@@ -10,6 +10,7 @@ export function workosAuthKit(options: ConvexWebhookOptions = {}): ConvexExtensi
       component: "@convex-dev/workos-authkit",
       owns: "auth",
       defaultConvexPath: "/workos/webhook",
+      defaultWebhookPath: "/api/webhooks/workos",
     },
     options,
   );

@@ -14,7 +14,7 @@ export function requireConvexRuntime(): ConvexRuntime {
   const runtime = readConvexRuntime();
   if (!runtime) {
     throw new Error(
-      "@farm.js/convex/server needs convex() in the farm.config.ts integrations, or an explicit url option.",
+      "@farm.js/convex/server needs convex() in the farm.config.ts integrations with CONVEX_URL set. On a new app, let farm dev create the deployment, then restart it.",
     );
   }
   return runtime;

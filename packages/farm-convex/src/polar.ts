@@ -10,6 +10,7 @@ export function polar(options: ConvexWebhookOptions = {}): ConvexExtension {
       component: "@convex-dev/polar",
       owns: "billing",
       defaultConvexPath: "/polar/events",
+      defaultWebhookPath: "/api/webhooks/polar",
     },
     options,
   );

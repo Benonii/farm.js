@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, unwatchFile, watchFile } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { styleText } from "node:util";
@@ -86,6 +86,23 @@ export function stopConvexDev(state: ConvexDevState | undefined): void {
   state.child = undefined;
 }
 
+const DEPLOYMENT_URL_PATTERN = /^(?:VITE_)?CONVEX_URL=\S/m;
+
+/** Tell the developer to restart once convex dev has written the new deployment's URL. */
+export function announceNewDeployment(root: string): () => void {
+  const filePath = path.join(root, ".env.local");
+  console.warn(
+    "[farm:convex] CONVEX_URL is not set yet. convex dev will create a deployment; restart farm dev when it is ready.",
+  );
+  const check = () => {
+    if (!DEPLOYMENT_URL_PATTERN.test(readEnvironmentFile(root))) return;
+    unwatchFile(filePath, check);
+    console.log("[farm:convex] Convex deployment is ready. Restart farm dev to connect to it.");
+  };
+  watchFile(filePath, { interval: 500 }, check);
+  return () => unwatchFile(filePath, check);
+}
+
 export function createConvexPlugin(input: ConvexPluginInput) {
   let root = process.cwd();
   return definePlugin<ConvexDevState>({
@@ -93,11 +110,22 @@ export function createConvexPlugin(input: ConvexPluginInput) {
     configure(config) {
       const view = config as ConvexFarmConfigView;
       root = path.resolve(view.root ?? root);
+      if (input.waitingForDeployment) return;
       checkServiceHomes({ ...view, root }, input.functionsDirectory, input.homes, input.extensions);
     },
     setup: () => ({}),
     dev: {
       server(_viteServer, { state, lifecycle }) {
+        if (input.waitingForDeployment) {
+          const stopWatching = announceNewDeployment(root);
+          lifecycle.onShutdown(stopWatching);
+          if (!input.dev) {
+            console.warn(
+              "[farm:convex] CONVEX_URL is not set. Run `npx convex dev` to create a deployment.",
+            );
+            return;
+          }
+        }
         if (!input.dev) return;
         // Vite closes its HTTP server on every restart (an edited .env does that), and Farm
         // runs this hook once per farm dev, so stop only on shutdown.

@@ -22,12 +22,13 @@ slots.
 
 ```bash
 pnpm add @farm.js/convex convex
-npx convex dev
 ```
 
-The first `npx convex dev` creates a deployment and writes `CONVEX_URL` to `.env.local`. In a
-project that depends on Vite it writes `VITE_CONVEX_URL` instead; Farm reads either name. For a
-free local deployment with no Convex account, run `CONVEX_AGENT_MODE=anonymous npx convex dev`.
+Register the integration (below) and run `farm dev`. On a new app with no deployment yet, Farm
+starts `convex dev`, which creates one and writes `CONVEX_URL` to `.env.local`; Farm then asks you
+to restart `farm dev` to connect. In a project that depends on Vite, Convex writes
+`VITE_CONVEX_URL` instead; Farm reads either name. For a free local deployment with no Convex
+account, set `CONVEX_AGENT_MODE=anonymous`.
 
 ## Register it
 
@@ -44,15 +45,17 @@ export default defineConfig({
 });
 ```
 
-`convex()` does four things:
+`convex()` does five things:
 
-- Checks `CONVEX_URL` and `CONVEX_SITE_URL` at startup. A missing URL, or a `.convex.site` URL
-  where the `.convex.cloud` one belongs, fails with an error that names the fix. When
-  `CONVEX_SITE_URL` is not set, Farm works it out from `CONVEX_URL`.
+- Checks `CONVEX_URL` and `CONVEX_SITE_URL` at startup. In `farm build` and production, a missing
+  URL, or a `.convex.site` URL where the `.convex.cloud` one belongs, fails with an error that
+  names the fix. When `CONVEX_SITE_URL` is not set, Farm works it out from `CONVEX_URL`.
 - Wraps every route in a Convex provider, so `useQuery`, `useMutation`, and `useAction` from
   `convex/react` work in client components. Only the public deployment URL reaches the browser.
 - Starts `convex dev` when `farm dev` starts, and stops it when Farm stops. It never runs during
   `farm build` or in production.
+- Reads `convex/convex.config.ts` and turns on the helper for each component it knows, such as
+  Better Auth or Stripe. See [Services that live in Convex](#services-that-live-in-convex).
 - Checks that auth and billing are not set up twice, once in Convex and once in Farm. See
   [Choose where a service lives](#choose-where-a-service-lives).
 
@@ -130,27 +133,36 @@ The component receives the deployment URL as `url`. Use `readConvexReactClient(u
 
 ## Services that live in Convex
 
-Convex apps often run auth and billing inside Convex as components. `convex({ use })` takes
-extensions for those services. Each extension tells Farm what the service needs from your app,
-such as routes on your own domain, the visitor's Convex token, or a browser provider, and nothing
-else is registered in Farm.
+Convex apps often run auth, billing, and email inside Convex as components. `convex()` reads the
+components installed in `convex/convex.config.ts` and turns on a helper for each one it knows, so
+nothing else is registered in Farm. With `@convex-dev/better-auth` installed, this is the whole
+config:
 
 **farm.config.ts**
 
 ```ts
 import { defineConfig } from "@farm.js/core";
 import { convex } from "@farm.js/convex";
-import { betterAuth } from "@farm.js/convex/better-auth";
-import { polar } from "@farm.js/convex/polar";
 
 export default defineConfig({
   integrations: {
-    convex: convex({
-      use: [betterAuth(), polar({ webhooks: "/api/webhooks/polar" })],
-    }),
+    convex: convex(),
   },
 });
 ```
+
+To change a helper's options, list it in `use`. An entry in `use` replaces the detected helper for
+the same component, and `detect: false` turns detection off:
+
+```ts
+import { betterAuth, convex, stripe } from "@farm.js/convex";
+
+convex({ use: [stripe({ webhooks: true })] }); // Better Auth is still detected
+convex({ detect: false, use: [betterAuth()] }); // only what is listed
+```
+
+A service whose `home` is `"farm"` is never detected. Every helper is exported from
+`@farm.js/convex` and from its own path, such as `@farm.js/convex/stripe`.
 
 | Extension                                         | Convex component             | What Farm adds                                                               |
 | ------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
@@ -163,15 +175,14 @@ export default defineConfig({
 | `component(name, options)` from `@farm.js/convex` | Any component                | Whatever you pass: routes, ownership, token, provider                        |
 
 Every helper with a webhook takes the same two options: `webhooks`, the path on your domain to
-give the provider's dashboard, and `convexPath`, if you registered the component's route somewhere
-other than its default:
+give the provider's dashboard (`true` uses `/api/webhooks/<service>`), and `convexPath`, if you
+registered the component's route somewhere other than its default:
 
 ```ts
 convex({
   use: [
-    betterAuth(),
-    stripe({ webhooks: "/api/webhooks/stripe" }),
-    resend({ webhooks: "/api/webhooks/resend" }),
+    stripe({ webhooks: true }), // https://<your-app>/api/webhooks/stripe
+    resend({ webhooks: "/hooks/email" }),
   ],
 });
 ```
@@ -185,8 +196,8 @@ When an extension's component is missing from `convex.config.ts`, Farm prints a 
 
 ### Auth with Better Auth running in Convex
 
-`betterAuth()` forwards `/api/auth/*` to the `@convex-dev/better-auth` component on your Convex
-site URL. Sign-in happens on your own domain, so session cookies are first-party and
+When `@convex-dev/better-auth` is in `convex.config.ts`, `convex()` turns on `betterAuth()`. It
+forwards `/api/auth/*` to the component on your Convex site URL. Sign-in happens on your own domain, so session cookies are first-party and
 server-rendered pages know who is signed in. The extension also exchanges the visitor's session
 cookie for a Convex token, so `preloadQuery` and the other server helpers run as the signed-in
 user, and wraps the app in `ConvexBetterAuthProvider` so live queries do too. Visitors without a
@@ -270,8 +281,7 @@ extension. Name its package,
 then map paths on your domain to the routes the component registers in `convex/http.ts`:
 
 ```ts
-import { component, convex } from "@farm.js/convex";
-import { betterAuth } from "@farm.js/convex/better-auth";
+import { betterAuth, component, convex } from "@farm.js/convex";
 
 convex({
   use: [

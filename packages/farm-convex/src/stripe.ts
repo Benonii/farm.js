@@ -10,6 +10,7 @@ export function stripe(options: ConvexWebhookOptions = {}): ConvexExtension {
       component: "@convex-dev/stripe",
       owns: "billing",
       defaultConvexPath: "/stripe/webhook",
+      defaultWebhookPath: "/api/webhooks/stripe",
     },
     options,
   );
