@@ -3,7 +3,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isDeploymentChosen, resolveDevOptions, startConvexDev, stopConvexDev } from "../dev.js";
+import { EventEmitter } from "node:events";
+
+import {
+  createConvexPlugin,
+  isDeploymentChosen,
+  resolveDevOptions,
+  startConvexDev,
+  stopConvexDev,
+} from "../dev.js";
 
 import type { ConvexDevState } from "../types.js";
 
@@ -97,6 +105,37 @@ describe.skipIf(process.platform === "win32")("convex dev runner", () => {
       "convex │ Convex functions ready!\n",
       "convex │ function failed\n",
     ]);
+  });
+
+  it("keeps convex dev running when Vite restarts and stops it when Farm shuts down", async () => {
+    const runner: ConvexDevState = {};
+    const root = createAppWithFakeConvex();
+    const plugin = createConvexPlugin({
+      dev: {},
+      homes: {},
+      functionsDirectory: "convex",
+      extensions: [],
+    });
+    const configure = plugin.configure as (config: object, context: object) => void;
+    configure({ root, integrations: {} }, {});
+    const httpServer = new EventEmitter();
+    const shutdownHooks: Array<() => void> = [];
+    const lifecycle = { onShutdown: (hook: () => void) => shutdownHooks.push(hook) };
+    const server = plugin.dev?.server as (vite: object, context: object) => void;
+    try {
+      server({ httpServer }, { state: runner, lifecycle });
+      await waitFor(() => readTextFile(path.join(root, "arguments.txt")).trim() === "dev");
+
+      // Vite closes the old HTTP server on every restart, such as after an .env edit.
+      httpServer.emit("close");
+      expect(runner.child?.exitCode).toBeNull();
+      expect(readTextFile(path.join(root, "stopped.txt"))).toBe("");
+
+      shutdownHooks.forEach((hook) => hook());
+      await waitFor(() => readTextFile(path.join(root, "stopped.txt")).trim() === "stopped");
+    } finally {
+      stopConvexDev(runner);
+    }
   });
 
   it("warns and carries on when convex is not installed", () => {

@@ -2,6 +2,7 @@ import { defineIntegration } from "@farm.js/core";
 
 import { createConvexPlugin, resolveDevOptions } from "./dev.js";
 import { resolveDeploymentURLs } from "./environment.js";
+import { checkExtensions, createExtensionRoutes, pickExtensionValue } from "./extensions.js";
 import { setConvexRuntime } from "./runtime.js";
 
 import type { ConvexIntegrationInput } from "./types.js";
@@ -11,19 +12,22 @@ const DEFAULT_FUNCTIONS_DIRECTORY = "convex";
 
 export function convex(input: ConvexIntegrationInput = {}) {
   const urls = resolveDeploymentURLs(input);
-  setConvexRuntime({ ...urls, token: input.token });
+  const extensions = input.use ?? [];
+  checkExtensions(extensions);
+  setConvexRuntime({ ...urls, token: input.token ?? pickExtensionValue(extensions, "token") });
   return defineIntegration({
     category: "database",
     type: "convex",
     instance: urls,
     log: input.log,
+    routes: createExtensionRoutes(extensions, urls.siteURL),
     providers: [
       {
         name: "convex-provider",
         type: "convex",
         props: { url: urls.url },
         supportsIsolatedHydration: true,
-        component: input.provider ?? DEFAULT_PROVIDER,
+        component: input.provider ?? pickExtensionValue(extensions, "provider") ?? DEFAULT_PROVIDER,
       },
     ],
     plugins: [
@@ -31,6 +35,7 @@ export function convex(input: ConvexIntegrationInput = {}) {
         dev: resolveDevOptions(input.dev),
         homes: input.home ?? {},
         functionsDirectory: input.functionsDirectory ?? DEFAULT_FUNCTIONS_DIRECTORY,
+        extensions,
       }),
     ],
   });
@@ -42,6 +47,8 @@ export { CONVEX_PAIRS } from "./pairs.js";
 export type {
   ConvexAdapterOptions,
   ConvexDevOptions,
+  ConvexExtension,
+  ConvexExtensionRoute,
   ConvexHomes,
   ConvexIntegrationInput,
   ConvexPair,

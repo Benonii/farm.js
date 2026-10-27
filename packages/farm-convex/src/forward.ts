@@ -29,9 +29,14 @@ function copyResponse(response: Response): Response {
   });
 }
 
-export async function forwardRequest(request: Request, siteURL: string): Promise<Response> {
+export async function forwardRequest(
+  request: Request,
+  siteURL: string,
+  targetPath?: string,
+): Promise<Response> {
   const incomingURL = new URL(request.url);
-  const targetURL = new URL(`${incomingURL.pathname}${incomingURL.search}`, siteURL);
+  const pathname = targetPath ?? incomingURL.pathname;
+  const targetURL = new URL(`${pathname}${incomingURL.search}`, siteURL);
   const init: ForwardRequestInit = {
     method: request.method,
     headers: createForwardHeaders(request, incomingURL),

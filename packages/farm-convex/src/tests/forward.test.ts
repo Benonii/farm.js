@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { convexBetterAuth } from "../better-auth.js";
+import { fetchBetterAuthToken } from "../better-auth.js";
+import { forwardRequest } from "../forward.js";
 import { startRecordingServer } from "./recording-server.js";
 
 import type { RecordingServer } from "./types.js";
 
-describe("convexBetterAuth handler", () => {
+describe("forwardRequest", () => {
   let convexSite: RecordingServer;
 
   beforeAll(async () => {
@@ -26,13 +27,12 @@ describe("convexBetterAuth handler", () => {
   afterAll(() => convexSite.close());
 
   it("passes the path, query, method and body through to the Convex site", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
     const request = new Request("https://app.example.com/api/auth/sign-in/email?redirect=%2Fhome", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: "ada@example.com", password: "correct horse" }),
     });
-    const response = await auth.handler(request);
+    const response = await forwardRequest(request, convexSite.url);
     const recorded = convexSite.requests.at(-1);
     expect(recorded?.method).toBe("POST");
     expect(recorded?.url).toBe("/api/auth/sign-in/email?redirect=%2Fhome");
@@ -44,9 +44,9 @@ describe("convexBetterAuth handler", () => {
   });
 
   it("keeps every Set-Cookie header from Convex", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
-    const response = await auth.handler(
+    const response = await forwardRequest(
       new Request("https://app.example.com/api/auth/get-session"),
+      convexSite.url,
     );
     expect(response.headers.getSetCookie()).toEqual([
       "session_token=abc; Path=/",
@@ -55,20 +55,20 @@ describe("convexBetterAuth handler", () => {
   });
 
   it("returns redirects to the browser instead of following them", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
-    const response = await auth.handler(
+    const response = await forwardRequest(
       new Request("https://app.example.com/api/auth/callback/github?code=1"),
+      convexSite.url,
     );
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("https://app.example.com/account");
   });
 
   it("tells Better Auth which host the browser used and asks for an uncompressed response", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
-    await auth.handler(
+    await forwardRequest(
       new Request("https://app.example.com/api/auth/get-session", {
         headers: { "accept-encoding": "gzip", "x-forwarded-host": "attacker.example.com" },
       }),
+      convexSite.url,
     );
     const headers = convexSite.requests.at(-1)?.headers;
     expect(headers?.["x-forwarded-host"]).toBe("app.example.com");
@@ -77,9 +77,25 @@ describe("convexBetterAuth handler", () => {
     expect(headers?.host).toBe(new URL(convexSite.url).host);
     expect(headers?.["accept-encoding"]).toBe("identity");
   });
+
+  it("sends a route with a fixed target to that Convex path, keeping the query", async () => {
+    await forwardRequest(
+      new Request("https://app.example.com/api/webhooks/polar?attempt=2", {
+        method: "POST",
+        headers: { "webhook-signature": "v1,abc" },
+        body: '{"type":"order.paid"}',
+      }),
+      convexSite.url,
+      "/polar/events",
+    );
+    const recorded = convexSite.requests.at(-1);
+    expect(recorded?.url).toBe("/polar/events?attempt=2");
+    expect(recorded?.headers["webhook-signature"]).toBe("v1,abc");
+    expect(recorded?.body).toBe('{"type":"order.paid"}');
+  });
 });
 
-describe("convexBetterAuth token", () => {
+describe("fetchBetterAuthToken", () => {
   let convexSite: RecordingServer;
 
   beforeAll(async () => {
@@ -95,26 +111,24 @@ describe("convexBetterAuth token", () => {
   afterAll(() => convexSite.close());
 
   it("exchanges the session cookie for a Convex token", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
     const request = new Request("https://app.example.com/", {
       headers: { cookie: "theme=dark; better-auth.session_token=valid" },
     });
-    expect(await auth.token(request)).toBe("jwt-for-ada");
+    expect(await fetchBetterAuthToken(request, convexSite.url)).toBe("jwt-for-ada");
     expect(convexSite.requests.at(-1)?.url).toBe("/api/auth/convex/token");
   });
 
   it("skips the network when the visitor has no session cookie", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
     const requestCount = convexSite.requests.length;
-    expect(await auth.token(new Request("https://app.example.com/"))).toBeUndefined();
+    const request = new Request("https://app.example.com/");
+    expect(await fetchBetterAuthToken(request, convexSite.url)).toBeUndefined();
     expect(convexSite.requests.length).toBe(requestCount);
   });
 
   it("returns no token when Convex rejects the session", async () => {
-    const auth = convexBetterAuth({ siteURL: convexSite.url });
     const request = new Request("https://app.example.com/", {
       headers: { cookie: "better-auth.session_token=expired" },
     });
-    expect(await auth.token(request)).toBeUndefined();
+    expect(await fetchBetterAuthToken(request, convexSite.url)).toBeUndefined();
   });
 });

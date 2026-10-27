@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { CONVEX_BETTER_AUTH_FORWARDING, CONVEX_COMPONENT_SERVICES, CONVEX_PAIRS } from "./pairs.js";
+import { CONVEX_COMPONENT_SERVICES, CONVEX_PAIRS } from "./pairs.js";
 import { FARM_BUILT_IN_AUTH, FARM_INTEGRATION_SERVICES } from "./pairs.js";
 
-import type { ConvexFarmConfigView, ConvexHomeConflict, ConvexHomes } from "./types.js";
-import type { ConvexIntegrationView, ConvexServiceSetup } from "./types.js";
+import type { ConvexExtension, ConvexFarmConfigView, ConvexHomeConflict } from "./types.js";
+import type { ConvexHomes, ConvexServiceSetup } from "./types.js";
 
 const COMPONENT_IMPORT_PATTERN =
   /from\s+["']((?:@[\w.-]+\/)?[\w.-]+)\/convex\.config(?:\.js)?["']/g;
@@ -25,13 +25,30 @@ export function findConvexComponents(source: string): ConvexServiceSetup[] {
     .map((name) => ({ service: CONVEX_COMPONENT_SERVICES[name], side: "convex", name }));
 }
 
-function nameIntegration(integration: ConvexIntegrationView): string | undefined {
-  const instance = integration.instance;
-  const isForwarding =
-    typeof instance === "object" &&
-    instance !== null &&
-    Reflect.get(instance, "kind") === "convex-better-auth";
-  return isForwarding ? CONVEX_BETTER_AUTH_FORWARDING : integration.type;
+// An extension that owns a service counts even before its component is installed.
+export function findExtensionServices(
+  extensions: readonly ConvexExtension[],
+): ConvexServiceSetup[] {
+  return extensions.flatMap(({ name, owns, component }) =>
+    owns ? [{ service: owns, side: "convex", name: component ?? name }] : [],
+  );
+}
+
+function mergeConvexServices(
+  components: readonly ConvexServiceSetup[],
+  extensions: readonly ConvexServiceSetup[],
+): ConvexServiceSetup[] {
+  const names = new Set(components.map((setup) => setup.name));
+  return [...components, ...extensions.filter((setup) => !names.has(setup.name))];
+}
+
+function warnMissingComponents(source: string, extensions: readonly ConvexExtension[]): void {
+  for (const { name, component } of extensions) {
+    if (!component || source.includes(`${component}/convex.config`)) continue;
+    console.warn(
+      `[farm:convex] ${name}() needs ${component} in convex.config.ts. Add app.use() for it there.`,
+    );
+  }
 }
 
 function isBuiltInAuthEnabled(auth: unknown): boolean {
@@ -42,7 +59,7 @@ function isBuiltInAuthEnabled(auth: unknown): boolean {
 
 export function findFarmIntegrations(config: ConvexFarmConfigView): ConvexServiceSetup[] {
   const names = Object.values(config.integrations ?? {})
-    .flatMap((integration) => (integration ? [nameIntegration(integration)] : []))
+    .flatMap((integration) => (integration ? [integration.type] : []))
     .concat(isBuiltInAuthEnabled(config.auth) ? [FARM_BUILT_IN_AUTH] : []);
   return names
     .filter(
@@ -87,11 +104,12 @@ export function checkServiceHomes(
   config: ConvexFarmConfigView,
   functionsDirectory: string,
   homes: ConvexHomes,
+  extensions: readonly ConvexExtension[] = [],
 ): void {
-  const source = readConvexConfigSource(config.root ?? process.cwd(), functionsDirectory);
-  if (!source) return;
+  const source = readConvexConfigSource(config.root ?? process.cwd(), functionsDirectory) ?? "";
+  warnMissingComponents(source, extensions);
   const conflicts = findHomeConflicts(
-    findConvexComponents(source),
+    mergeConvexServices(findConvexComponents(source), findExtensionServices(extensions)),
     findFarmIntegrations(config),
     homes,
   );

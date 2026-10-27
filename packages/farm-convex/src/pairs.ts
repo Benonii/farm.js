@@ -2,8 +2,6 @@ import type { ConvexPair, ConvexService } from "./types.js";
 
 export const FARM_BUILT_IN_AUTH = "farm-auth";
 
-export const CONVEX_BETTER_AUTH_FORWARDING = "better-auth:convex";
-
 export const CONVEX_COMPONENT_SERVICES: Readonly<Record<string, ConvexService>> = {
   "@convex-dev/better-auth": "auth",
   "@convex-dev/workos-authkit": "auth",
@@ -15,7 +13,6 @@ export const CONVEX_COMPONENT_SERVICES: Readonly<Record<string, ConvexService>> 
 export const FARM_INTEGRATION_SERVICES: Readonly<Record<string, ConvexService>> = {
   [FARM_BUILT_IN_AUTH]: "auth",
   "better-auth": "auth",
-  [CONVEX_BETTER_AUTH_FORWARDING]: "auth",
   clerk: "auth",
   workos: "auth",
   auth0: "auth",
@@ -27,12 +24,6 @@ export const FARM_INTEGRATION_SERVICES: Readonly<Record<string, ConvexService>> 
 };
 
 export const CONVEX_PAIRS: readonly ConvexPair[] = [
-  {
-    service: "auth",
-    component: "@convex-dev/better-auth",
-    integration: CONVEX_BETTER_AUTH_FORWARDING,
-    relation: "together",
-  },
   {
     service: "auth",
     component: "@convex-dev/workos-authkit",

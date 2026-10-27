@@ -1,10 +1,11 @@
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { convexBetterAuth } from "../better-auth.js";
+import { betterAuth } from "../better-auth.js";
 import { checkServiceHomes, findConvexComponents, findFarmIntegrations } from "../homes.js";
+import { polar } from "../polar.js";
 
 const POLAR_AND_BETTER_AUTH_CONFIG = `import { defineApp } from "convex/server";
 import betterAuth from "@convex-dev/better-auth/convex.config";
@@ -36,19 +37,6 @@ describe("findConvexComponents", () => {
 });
 
 describe("findFarmIntegrations", () => {
-  it("names Better Auth that forwards to Convex separately from plain Better Auth", () => {
-    const setups = findFarmIntegrations({
-      integrations: {
-        forwarded: {
-          type: "better-auth",
-          instance: convexBetterAuth({ siteURL: "http://127.0.0.1:3211" }),
-        },
-        plain: { type: "better-auth", instance: {} },
-      },
-    });
-    expect(setups.map((setup) => setup.name)).toEqual(["better-auth:convex", "better-auth"]);
-  });
-
   it("ignores Farm's built-in auth when the resolved config turns it off", () => {
     expect(findFarmIntegrations({ auth: { enabled: false, basePath: "/api/auth" } })).toEqual([]);
   });
@@ -101,11 +89,31 @@ describe("checkServiceHomes", () => {
     expect(() => checkServiceHomes({ root, auth: true }, "convex", {})).toThrow(/farm-auth/);
   });
 
-  it("allows Better Auth in Convex together with Farm's Better Auth forwarding to it", () => {
+  it("accepts auth and billing extensions whose components are installed", () => {
     const root = createAppRoot(POLAR_AND_BETTER_AUTH_CONFIG);
-    const instance = convexBetterAuth({ siteURL: "http://127.0.0.1:3211" });
-    const integrations = { auth: { type: "better-auth", instance } };
-    expect(() => checkServiceHomes({ root, integrations }, "convex", {})).not.toThrow();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const extensions = [betterAuth(), polar()];
+    expect(() =>
+      checkServiceHomes({ root, integrations: {} }, "convex", {}, extensions),
+    ).not.toThrow();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("stops when an extension owns a service that a Farm integration also provides", () => {
+    const root = createAppRoot();
+    const integrations = { auth: { type: "better-auth" } };
+    expect(() => checkServiceHomes({ root, integrations }, "convex", {}, [betterAuth()])).toThrow(
+      /auth is set up in Convex \(@convex-dev\/better-auth\) and in Farm \(better-auth\)/,
+    );
+  });
+
+  it("warns when an extension's component is not in convex.config.ts", () => {
+    const root = createAppRoot(`import { defineApp } from "convex/server";\n`);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    checkServiceHomes({ root, integrations: {} }, "convex", {}, [polar()]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("polar() needs @convex-dev/polar"));
+    warn.mockRestore();
   });
 
   it("allows WorkOS sign-in in Farm together with the AuthKit component in Convex", () => {

@@ -114,50 +114,63 @@ can be stale for a while belongs in a [cached query](/docs/cache-ppr) instead.
 ## Choose client ownership
 
 By default Farm creates one `ConvexReactClient` per deployment URL in the browser. To wrap the app
-in your own provider, for example one that also handles auth, pass a component reference:
+in your own provider, pass a component reference:
 
 **farm.config.ts**
 
 ```ts
 convex({
-  provider: { module: "@/components/ConvexAuthProvider", export: "ConvexAuthProvider" },
+  provider: { module: "@/components/AppConvexProvider", export: "AppConvexProvider" },
 });
 ```
 
 The component receives the deployment URL as `url`. Use `readConvexReactClient(url)` from
-`@farm.js/convex/client` to get the shared client instead of constructing a second one.
+`@farm.js/convex/client` to get the shared client instead of constructing a second one. A
+`provider` you pass here wins over one that an [extension](#services-that-live-in-convex) supplies.
 
-## Auth with Better Auth running in Convex
+## Services that live in Convex
 
-When Better Auth runs as the `@convex-dev/better-auth` component, `convexBetterAuth()` gives
-Farm's [Better Auth integration](/docs/integrations/auth/better-auth) an instance that forwards
-`/api/auth/*` to your Convex site URL. Sign-in then happens on your own domain, so session cookies
-are first-party and server-rendered pages know who is signed in.
+Convex apps often run auth and billing inside Convex as components. `convex({ use })` takes
+extensions for those services. Each extension tells Farm what the service needs from your app,
+such as routes on your own domain, the visitor's Convex token, or a browser provider, and nothing
+else is registered in Farm.
 
 **farm.config.ts**
 
 ```ts
 import { defineConfig } from "@farm.js/core";
-import { betterAuth } from "@farm.js/better-auth";
 import { convex } from "@farm.js/convex";
-import { convexBetterAuth } from "@farm.js/convex/better-auth";
-
-const auth = convexBetterAuth();
+import { betterAuth } from "@farm.js/convex/better-auth";
+import { polar } from "@farm.js/convex/polar";
 
 export default defineConfig({
   integrations: {
     convex: convex({
-      token: auth.token,
-      provider: { module: "@/components/ConvexAuthProvider", export: "ConvexAuthProvider" },
+      use: [betterAuth(), polar({ webhooks: "/api/webhooks/polar" })],
     }),
-    auth: betterAuth({ instance: auth }),
   },
 });
 ```
 
-`auth.token` exchanges the visitor's session cookie for a Convex token, so `preloadQuery` and the
-other server helpers run as the signed-in user. Visitors without a session cookie cost no network
-call.
+| Extension                                         | Convex component          | What Farm adds                                                          |
+| ------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `betterAuth()` from `@farm.js/convex/better-auth` | `@convex-dev/better-auth` | `/api/auth/*` on your domain, the visitor's token, the browser provider |
+| `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`       | An optional webhook route on your domain                                |
+
+Each service can have only one owner. Two extensions that own the same service, or an extension
+next to a Farm integration for the same service, stop `farm dev` and `farm build` with an error.
+When an extension's component is missing from `convex.config.ts`, Farm prints a warning.
+
+### Auth with Better Auth running in Convex
+
+`betterAuth()` forwards `/api/auth/*` to the `@convex-dev/better-auth` component on your Convex
+site URL. Sign-in happens on your own domain, so session cookies are first-party and
+server-rendered pages know who is signed in. The extension also exchanges the visitor's session
+cookie for a Convex token, so `preloadQuery` and the other server helpers run as the signed-in
+user, and wraps the app in `ConvexBetterAuthProvider` so live queries do too. Visitors without a
+session cookie cost no network call.
+
+Do not register `@farm.js/better-auth` or set `auth: true` as well: Convex owns auth here.
 
 On the Convex side, set Better Auth's `baseURL` to your app's URL, not the Convex site URL:
 
@@ -182,32 +195,30 @@ export const createAuth = (context: GenericCtx<DataModel>) =>
   });
 ```
 
-In the browser, create the auth client without a `baseURL` so it calls your own domain, and wrap
-the app in `ConvexBetterAuthProvider`:
+In the browser, sign in with the auth client from `@farm.js/convex/better-auth/client`. It calls
+your own domain:
 
-**src/components/ConvexAuthProvider.tsx**
+**src/components/SignInForm.tsx**
 
 ```tsx
 "use client";
 
-import type { ReactNode } from "react";
-import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
-import { convexClient } from "@convex-dev/better-auth/client/plugins";
-import { readConvexReactClient } from "@farm.js/convex/client";
-import { createAuthClient } from "better-auth/react";
+import { authClient } from "@farm.js/convex/better-auth/client";
 
-export const authClient = createAuthClient({ plugins: [convexClient()] });
-
-export function ConvexAuthProvider({ url, children }: { url: string; children?: ReactNode }) {
+export function SignInButton() {
   return (
-    <ConvexBetterAuthProvider client={readConvexReactClient(url)} authClient={authClient}>
-      {children}
-    </ConvexBetterAuthProvider>
+    <button onClick={() => authClient.signIn.email({ email: "ada@example.com", password: "..." })}>
+      Sign in
+    </button>
   );
 }
 ```
 
-Because sign-in now goes through your domain, OAuth providers call back to
+To use Better Auth client plugins of your own, create your client with
+`createAuthClient({ plugins: [convexClient(), ...] })` and pass a [`provider`](#choose-client-ownership)
+that wraps the app in `ConvexBetterAuthProvider` with it.
+
+Because sign-in goes through your domain, OAuth providers call back to
 `https://<your-app>/api/auth/callback/<provider>`. Update the callback URL in each provider's
 console when you move an app from the cross-domain setup to this one, and set `SITE_URL` on the
 Convex deployment with `npx convex env set SITE_URL https://<your-app>`.
@@ -215,6 +226,51 @@ Convex deployment with `npx convex env set SITE_URL https://<your-app>`.
 The forwarder passes the path, query, method, body, and every `Set-Cookie` header through, returns
 redirects to the browser instead of following them, and replaces any `x-forwarded-host` the
 browser sent with the host it actually used.
+
+### Billing with Polar running in Convex
+
+With `@convex-dev/polar`, checkout, the customer portal, and subscription data all live in Convex,
+and you call them from Convex functions. Farm has nothing to mount unless you want Polar's webhooks
+on your own domain. `polar({ webhooks })` forwards that path to the route the component registers
+with `polar.registerRoutes(http)`:
+
+```ts
+convex({ use: [polar({ webhooks: "/api/webhooks/polar" })] });
+```
+
+Then use `https://<your-app>/api/webhooks/polar` as the webhook URL in Polar. The body and
+signature headers reach Convex unchanged, so the component verifies them as usual. If you
+registered the component's routes on a custom path, pass it as `convexPath`. Without `webhooks`,
+point Polar at `https://<deployment>.convex.site/polar/events` directly; `polar()` then only
+tells Farm that billing lives in Convex.
+
+### Write your own extension
+
+An extension is a plain object, so a service that Farm does not ship can be added in app code or
+a package:
+
+```ts
+import type { ConvexExtension } from "@farm.js/convex";
+
+export function resend(): ConvexExtension {
+  return {
+    name: "resend",
+    component: "@convex-dev/resend",
+    routes: [{ path: "/api/webhooks/resend", methods: ["POST"], to: "/resend-webhook" }],
+  };
+}
+```
+
+| Field       | Use                                                                                |
+| ----------- | ---------------------------------------------------------------------------------- |
+| `name`      | Shown in errors and warnings.                                                      |
+| `owns`      | `"auth"` or `"billing"`: the service Convex owns through this extension.           |
+| `component` | The component it needs in `convex.config.ts`. Farm warns when it is missing.       |
+| `routes`    | Paths on your domain forwarded to the Convex site URL. `to` sets the Convex path.  |
+| `token`     | Reads the visitor's Convex token on the server. Only one extension can set it.     |
+| `provider`  | A browser provider used instead of the default one. Only one extension can set it. |
+
+A `token` or `provider` passed to `convex()` directly wins over an extension's.
 
 ## Auth with a hosted provider
 
@@ -246,23 +302,21 @@ export default defineConfig({
 
 ## Choose where a service lives
 
-Convex apps often run auth and billing as Convex components, and Farm has integrations for the
-same services. Running both for one service gives you two sources of truth, so Farm checks
-`convex/convex.config.ts` against your Farm integrations at startup. When a service is set up on
-both sides, `farm dev` and `farm build` stop with an error that names the `home` option.
+Running a service both in Convex and in Farm gives you two sources of truth. Besides the extensions
+in `use`, Farm reads the component imports in `convex/convex.config.ts` and compares them with your
+Farm integrations at startup. When a service is set up on both sides, `farm dev` and `farm build`
+stop with an error that names the `home` option.
 
-| Convex component                                               | Farm integration                               | Result   |
-| -------------------------------------------------------------- | ---------------------------------------------- | -------- |
-| `@convex-dev/better-auth`                                      | `betterAuth({ instance: convexBetterAuth() })` | Together |
-| `@convex-dev/workos-authkit`                                   | `workos()`                                     | Together |
-| `@convex-dev/better-auth`                                      | Any other auth integration, or `auth: true`    | Conflict |
-| `@convex-dev/workos-authkit`                                   | Any other auth integration, or `auth: true`    | Conflict |
-| `@convex-dev/polar`, `@convex-dev/stripe`, `@useautumn/convex` | `polar()`, `stripe()`, or `autumn()`           | Conflict |
+| In Convex                                                      | In Farm                                     | Result   |
+| -------------------------------------------------------------- | ------------------------------------------- | -------- |
+| `@convex-dev/workos-authkit`                                   | `workos()`                                  | Together |
+| `@convex-dev/better-auth` or `use: [betterAuth()]`             | Any auth integration, or `auth: true`       | Conflict |
+| `@convex-dev/workos-authkit`                                   | Any other auth integration, or `auth: true` | Conflict |
+| `@convex-dev/polar`, `@convex-dev/stripe`, `@useautumn/convex` | `polar()`, `stripe()`, or `autumn()`        | Conflict |
 
-"Together" pairs are designed to work as one: Farm forwards Better Auth to Convex, and WorkOS
-signs users in through Farm while the AuthKit component keeps them in sync in Convex. A service
-that lives on one side only, such as Polar as a Convex component with no Farm Polar integration,
-needs nothing.
+WorkOS is designed to run on both sides: it signs users in through Farm while the AuthKit
+component keeps them in sync in Convex. A service that lives on one side only, such as Polar as a
+Convex component with no Farm Polar integration, needs nothing.
 
 To keep both on purpose, for example while migrating, say which side owns the service:
 
@@ -270,9 +324,7 @@ To keep both on purpose, for example while migrating, say which side owns the se
 convex({ home: { billing: "convex" } });
 ```
 
-Detection reads the component imports in `convex.config.ts`. If your functions live somewhere
-other than `convex/`, pass `functionsDirectory`. When detection cannot tell, the `home` setting
-decides.
+If your functions live somewhere other than `convex/`, pass `functionsDirectory`.
 
 ## Turn off the dev runner
 

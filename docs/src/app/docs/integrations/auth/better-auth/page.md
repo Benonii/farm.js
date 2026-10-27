@@ -148,10 +148,11 @@ For client-only guards, wait for `authClient.getSession()` before rendering priv
 
 ## Better Auth running in Convex
 
-When Better Auth runs inside Convex as the `@convex-dev/better-auth` component, pass
-`convexBetterAuth()` from `@farm.js/convex/better-auth` as the `instance`. Farm then forwards
-`/api/auth/*` to your Convex deployment, so sign-in stays on your domain and server-rendered pages
-can read the session. See [Convex: auth with Better Auth](/docs/integrations/convex#auth-with-better-auth-running-in-convex).
+When Better Auth runs inside Convex as the `@convex-dev/better-auth` component, Convex owns auth
+and this integration is not used. Add `betterAuth()` from `@farm.js/convex/better-auth` to
+`convex({ use })` instead. It forwards `/api/auth/*` to your Convex deployment, so sign-in stays on
+your domain and server-rendered pages can read the session. See
+[Convex: auth with Better Auth](/docs/integrations/convex#auth-with-better-auth-running-in-convex).
 
 ## Adapter options
 

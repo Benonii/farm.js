@@ -60,21 +60,23 @@ export function startConvexDev(
     return;
   }
   const labelOutput = isDeploymentChosen(root);
-  state.child = spawn(binaryPath, ["dev", ...(options.args ?? [])], {
+  const child = spawn(binaryPath, ["dev", ...(options.args ?? [])], {
     cwd: root,
     stdio: labelOutput ? ["inherit", "pipe", "pipe"] : "inherit",
     shell: process.platform === "win32",
     env: labelOutput && process.stdout.isTTY ? { ...process.env, FORCE_COLOR: "1" } : process.env,
   });
-  if (labelOutput && state.child.stdout && state.child.stderr) {
-    writeLabelledLines(state.child.stdout, process.stdout);
-    writeLabelledLines(state.child.stderr, process.stderr);
+  state.child = child;
+  if (labelOutput && child.stdout && child.stderr) {
+    writeLabelledLines(child.stdout, process.stdout);
+    writeLabelledLines(child.stderr, process.stderr);
   }
   const stopWithFarm = () => stopConvexDev(state);
   process.once("exit", stopWithFarm);
-  state.child.once("exit", () => {
+  child.once("exit", () => {
     process.off("exit", stopWithFarm);
-    state.child = undefined;
+    // A runner that exits late must not forget the one that replaced it.
+    if (state.child === child) state.child = undefined;
   });
 }
 
@@ -91,14 +93,15 @@ export function createConvexPlugin(input: ConvexPluginInput) {
     configure(config) {
       const view = config as ConvexFarmConfigView;
       root = path.resolve(view.root ?? root);
-      checkServiceHomes({ ...view, root }, input.functionsDirectory, input.homes);
+      checkServiceHomes({ ...view, root }, input.functionsDirectory, input.homes, input.extensions);
     },
     setup: () => ({}),
     dev: {
-      server(viteServer, { state, lifecycle }) {
+      server(_viteServer, { state, lifecycle }) {
         if (!input.dev) return;
+        // Vite closes its HTTP server on every restart (an edited .env does that), and Farm
+        // runs this hook once per farm dev, so stop only on shutdown.
         startConvexDev(root, input.dev, state);
-        viteServer.httpServer?.once("close", () => stopConvexDev(state));
         lifecycle.onShutdown(() => stopConvexDev(state));
       },
     },

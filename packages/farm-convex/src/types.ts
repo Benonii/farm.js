@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type {
   FarmIntegrationLogger,
   FarmIntegrationProviderComponentReference,
+  FarmIntegrationRouteMethod,
 } from "@farm.js/core";
 
 export type ConvexTokenReader = (
@@ -31,6 +32,31 @@ export interface ConvexIntegrationInput {
   home?: ConvexHomes;
   functionsDirectory?: string;
   log?: FarmIntegrationLogger;
+  use?: readonly ConvexExtension[];
+}
+
+/** A route on the app's own domain that Farm forwards to the Convex site URL. */
+export interface ConvexExtensionRoute {
+  /** Farm route pattern, such as "/api/auth/[...auth]" or "/api/webhooks/polar". */
+  path: string;
+  /** Methods to forward. Defaults to GET and POST. */
+  methods?: readonly FarmIntegrationRouteMethod[];
+  /** Path on the Convex site URL. Defaults to the incoming path. */
+  to?: string;
+}
+
+/** A service that lives in Convex, such as auth or billing, wired into Farm by convex({ use }). */
+export interface ConvexExtension {
+  name: string;
+  /** The service Convex owns through this extension. Only one extension can own each service. */
+  owns?: ConvexService;
+  /** The Convex component it needs in convex.config.ts, such as "@convex-dev/polar". */
+  component?: string;
+  routes?: readonly ConvexExtensionRoute[];
+  /** Reads the visitor's Convex token on the server. Only one extension can set it. */
+  token?: ConvexTokenReader;
+  /** Browser provider used instead of the default one. Only one extension can set it. */
+  provider?: FarmIntegrationProviderComponentReference;
 }
 
 export interface ConvexDeploymentURLs {
@@ -79,21 +105,17 @@ export interface ConvexFarmConfigView {
 
 export interface ConvexIntegrationView {
   type?: string;
-  instance?: unknown;
 }
 
 export interface ConvexDevState {
   child?: ChildProcess;
 }
 
-export interface ConvexBetterAuthOptions {
-  siteURL?: string;
-}
-
-export interface ConvexBetterAuthInstance {
-  readonly kind: "convex-better-auth";
-  handler(request: Request): Promise<Response>;
-  token(request: Request): Promise<string | undefined>;
+export interface ConvexPolarOptions {
+  /** Path on your domain that receives Polar's webhooks and forwards them to Convex. */
+  webhooks?: string;
+  /** Path passed to polar.registerRoutes(http) in Convex. @default "/polar/events" */
+  convexPath?: string;
 }
 
 export interface ConvexAdapterOptions {
@@ -123,6 +145,7 @@ export interface ConvexPluginInput {
   dev: ConvexDevOptions | undefined;
   homes: ConvexHomes;
   functionsDirectory: string;
+  extensions: readonly ConvexExtension[];
 }
 
 export interface ConvexKeyPrefixer {

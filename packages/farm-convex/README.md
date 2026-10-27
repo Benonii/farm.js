@@ -42,5 +42,17 @@ export default async function HomePage() {
 
 Pages that preload Convex data are kept out of Farm's shared page cache.
 
-See the [Convex integration docs](https://farmjs.dev/docs/integrations/convex) for auth, the
-`home` option, and the rate-limit and KV adapters.
+## Auth and billing in Convex
+
+```ts
+import { convex } from "@farm.js/convex";
+import { betterAuth } from "@farm.js/convex/better-auth";
+import { polar } from "@farm.js/convex/polar";
+
+convex({ use: [betterAuth(), polar({ webhooks: "/api/webhooks/polar" })] });
+```
+
+Extensions wire services that live in Convex into Farm: routes on your own domain, the visitor's
+token, and the browser provider. See the
+[Convex integration docs](https://farmjs.dev/docs/integrations/convex) for writing your own
+extension, the `home` option, and the rate-limit and KV adapters.

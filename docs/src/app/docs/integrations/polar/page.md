@@ -135,9 +135,11 @@ Checkout and portal return paths must be same-origin, root-relative application 
 ## When billing lives in Convex
 
 If your app runs Polar as the `@convex-dev/polar` Convex component, keep billing there and do not
-also register `polar()`. The [Convex integration](/docs/integrations/convex#choose-where-a-service-lives)
-stops `farm dev` and `farm build` when both are set up, unless you set `home` to say which side
-owns billing.
+also register `polar()` from `@farm.js/polar`. The
+[Convex integration](/docs/integrations/convex#choose-where-a-service-lives) stops `farm dev` and
+`farm build` when both are set up, unless you set `home` to say which side owns billing. To receive
+Polar's webhooks on your own domain, add `polar({ webhooks })` from `@farm.js/convex/polar` to
+`convex({ use })` instead; see [Billing with Polar running in Convex](/docs/integrations/convex#billing-with-polar-running-in-convex).
 
 ## When Polar is a good fit
 

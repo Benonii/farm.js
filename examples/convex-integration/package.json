@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.12.5",
-    "@farm.js/better-auth": "workspace:*",
     "@farm.js/convex": "workspace:*",
     "@farm.js/core": "workspace:*",
     "better-auth": "1.6.11",

@@ -4,8 +4,8 @@ A small Farm app on [Convex](https://convex.dev) that uses every part of `@farm.
 
 - `convex()` wraps the app in a Convex provider and starts `convex dev` with `farm dev`.
 - The home page preloads messages on the server with `preloadQuery`, then keeps them live.
-- Better Auth runs inside Convex. Farm forwards `/api/auth/*` to it, so sign-in is same-site and
-  `/account` knows the user during server rendering.
+- Better Auth runs inside Convex. `convex({ use: [betterAuth()] })` forwards `/api/auth/*` to it,
+  so sign-in is same-site and `/account` knows the user during server rendering.
 - `/api/notes` stores values through `convexStorage()`, and `/api/*` is rate limited with
   `convexRateLimitStorage()`.
 
