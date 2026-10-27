@@ -112,7 +112,9 @@ describe("checkServiceHomes", () => {
     const root = createAppRoot(`import { defineApp } from "convex/server";\n`);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     checkServiceHomes({ root, integrations: {} }, "convex", {}, [polar()]);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("polar() needs @convex-dev/polar"));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("@convex-dev/polar is not in convex.config.ts"),
+    );
     warn.mockRestore();
   });
 

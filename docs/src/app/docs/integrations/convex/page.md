@@ -156,6 +156,7 @@ export default defineConfig({
 | ------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------- |
 | `betterAuth()` from `@farm.js/convex/better-auth` | `@convex-dev/better-auth` | `/api/auth/*` on your domain, the visitor's token, the browser provider |
 | `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`       | An optional webhook route on your domain                                |
+| `component(name, options)` from `@farm.js/convex` | Any component             | Whatever you pass: routes, ownership, token, provider                   |
 
 Each service can have only one owner. Two extensions that own the same service, or an extension
 next to a Farm integration for the same service, stop `farm dev` and `farm build` with an error.
@@ -241,13 +242,43 @@ convex({ use: [polar({ webhooks: "/api/webhooks/polar" })] });
 Then use `https://<your-app>/api/webhooks/polar` as the webhook URL in Polar. The body and
 signature headers reach Convex unchanged, so the component verifies them as usual. If you
 registered the component's routes on a custom path, pass it as `convexPath`. Without `webhooks`,
-point Polar at `https://<deployment>.convex.site/polar/events` directly; `polar()` then only
-tells Farm that billing lives in Convex.
+point Pol### Add any other Convex component
+
+`component()` wires any Convex component into Farm without writing an extension. Name its package,
+then map paths on your domain to the routes the component registers in `convex/http.ts`:
+
+```ts
+import { component, convex } from "@farm.js/convex";
+import { betterAuth } from "@farm.js/convex/better-auth";
+
+convex({
+  use: [
+    betterAuth(),
+    component("@convex-dev/resend", {
+      routes: { "/api/webhooks/resend": "/resend-webhook" },
+    }),
+    component("@convex-dev/rate-limiter"),
+  ],
+});
+```
+
+Farm warns at startup when a listed component is missing from `convex.config.ts`, and forwards
+each route's method, query, headers, and body unchanged. The component's own settings, such as
+products, API keys, or schedules, stay in your `convex/` code and `npx convex env set`, because
+that code runs on Convex.
+
+| Option     | Use                                                                                    |
+| ---------- | -------------------------------------------------------------------------------------- |
+| `routes`   | `{ "/path/on/your/domain": "/path/on/convex" }`, or full route objects with `methods`. |
+| `owns`     | `"auth"` or `"billing"` when the component owns that service.                          |
+| `name`     | Shown in errors and warnings. Defaults to the package name.                            |
+| `token`    | Reads the visitor's Convex token on the server.                                        |
+| `provider` | A browser provider used instead of the default one.                                    |
 
 ### Write your own extension
 
-An extension is a plain object, so a service that Farm does not ship can be added in app code or
-a package:
+`component()` returns a plain extension object. To publish a reusable one, such as `polar()`,
+return the object yourself:
 
 ```ts
 import type { ConvexExtension } from "@farm.js/convex";
@@ -269,6 +300,10 @@ export function resend(): ConvexExtension {
 | `routes`    | Paths on your domain forwarded to the Convex site URL. `to` sets the Convex path.  |
 | `token`     | Reads the visitor's Convex token on the server. Only one extension can set it.     |
 | `provider`  | A browser provider used instead of the default one. Only one extension can set it. |
+
+A `token` or `provider` passed to `convex()` directly wins over an extension's.
+
+fault one. Only one extension can set it. |
 
 A `token` or `provider` passed to `convex()` directly wins over an extension's.
 

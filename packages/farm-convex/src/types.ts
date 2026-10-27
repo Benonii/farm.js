@@ -111,6 +111,17 @@ export interface ConvexDevState {
   child?: ChildProcess;
 }
 
+/** Options for component(): what Farm should do for a Convex component. */
+export interface ConvexComponentOptions extends Omit<
+  ConvexExtension,
+  "name" | "component" | "routes"
+> {
+  /** Shown in errors and warnings. Defaults to the component's package name. */
+  name?: string;
+  /** Paths on your domain forwarded to Convex: { "/api/webhooks/resend": "/resend-webhook" }. */
+  routes?: Readonly<Record<string, string>> | readonly ConvexExtensionRoute[];
+}
+
 export interface ConvexPolarOptions {
   /** Path on your domain that receives Polar's webhooks and forwards them to Convex. */
   webhooks?: string;

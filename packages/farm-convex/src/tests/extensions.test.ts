@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { betterAuth } from "../better-auth.js";
+import { component } from "../component.js";
 import { convex } from "../index.js";
 import { polar } from "../polar.js";
 import { readConvexRuntime } from "../runtime.js";
@@ -98,5 +99,45 @@ describe("extension routes", () => {
     expect(response?.status).toBe(200);
     expect(convexSite.requests.at(-1)?.url).toBe("/polar/events");
     expect(convexSite.requests.at(-1)?.body).toBe('{"type":"subscription.created"}');
+  });
+});
+
+describe("component()", () => {
+  it("turns a path map into routes forwarded to the component's Convex paths", () => {
+    const resend = component("@convex-dev/resend", {
+      routes: { "/api/webhooks/resend": "/resend-webhook" },
+    });
+    expect(resend).toEqual({
+      name: "@convex-dev/resend",
+      component: "@convex-dev/resend",
+      routes: [{ path: "/api/webhooks/resend", to: "/resend-webhook" }],
+    });
+    const routes = convex({ url, dev: false, use: [resend] }).routes;
+    expect(routes?.map((route) => [route.path, route.methods])).toEqual([
+      ["/api/webhooks/resend", ["GET", "POST"]],
+    ]);
+  });
+
+  it("passes ownership, a name, full routes, and a token reader through", () => {
+    const token = () => "token";
+    const stripe = component("@convex-dev/stripe", {
+      name: "stripe",
+      owns: "billing",
+      token,
+      routes: [{ path: "/api/webhooks/stripe", methods: ["POST"], to: "/stripe/webhook" }],
+    });
+    expect(stripe).toMatchObject({
+      name: "stripe",
+      owns: "billing",
+      component: "@convex-dev/stripe",
+      token,
+    });
+    expect(() => convex({ url, dev: false, use: [polar(), stripe] })).toThrow(
+      /polar and stripe both own billing/,
+    );
+  });
+
+  it("needs a package name", () => {
+    expect(() => component(" ")).toThrow(/package name/);
   });
 });

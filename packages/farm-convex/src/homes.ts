@@ -46,7 +46,7 @@ function warnMissingComponents(source: string, extensions: readonly ConvexExtens
   for (const { name, component } of extensions) {
     if (!component || source.includes(`${component}/convex.config`)) continue;
     console.warn(
-      `[farm:convex] ${name}() needs ${component} in convex.config.ts. Add app.use() for it there.`,
+      `[farm:convex] ${component} is not in convex.config.ts, but convex({ use }) has ${name}. Add app.use() for it there.`,
     );
   }
 }

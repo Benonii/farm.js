@@ -41,11 +41,13 @@ export function convex(input: ConvexIntegrationInput = {}) {
   });
 }
 
+export { component } from "./component.js";
 export { convexRateLimitStorage } from "./rate-limit.js";
 export { convexStorage } from "./storage.js";
 export { CONVEX_PAIRS } from "./pairs.js";
 export type {
   ConvexAdapterOptions,
+  ConvexComponentOptions,
   ConvexDevOptions,
   ConvexExtension,
   ConvexExtensionRoute,

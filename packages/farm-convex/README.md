@@ -45,11 +45,18 @@ Pages that preload Convex data are kept out of Farm's shared page cache.
 ## Auth and billing in Convex
 
 ```ts
-import { convex } from "@farm.js/convex";
+import { component, convex } from "@farm.js/convex";
 import { betterAuth } from "@farm.js/convex/better-auth";
 import { polar } from "@farm.js/convex/polar";
 
-convex({ use: [betterAuth(), polar({ webhooks: "/api/webhooks/polar" })] });
+convex({
+  use: [
+    betterAuth(),
+    polar({ webhooks: "/api/webhooks/polar" }),
+    // any other component: map paths on your domain to its Convex routes
+    component("@convex-dev/resend", { routes: { "/api/webhooks/resend": "/resend-webhook" } }),
+  ],
+});
 ```
 
 Extensions wire services that live in Convex into Farm: routes on your own domain, the visitor's
