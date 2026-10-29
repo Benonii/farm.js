@@ -6,15 +6,20 @@ import type { ConvexExtension } from "./types.js";
 
 const DEFAULT_METHODS = ["GET", "POST"] as const;
 
-function listOwners(extensions: readonly ConvexExtension[], key: "token" | "provider"): string[] {
-  return extensions.filter((extension) => extension[key] !== undefined).map(({ name }) => name);
-}
+type ExtensionValueKey = "token" | "siteToken" | "tokenPath" | "provider";
 
-function checkSingleOwner(extensions: readonly ConvexExtension[], key: "token" | "provider") {
-  const owners = listOwners(extensions, key);
+function checkSingleOwner(
+  extensions: readonly ConvexExtension[],
+  keys: readonly ExtensionValueKey[],
+  label: string,
+  option: string,
+) {
+  const owners = extensions
+    .filter((extension) => keys.some((key) => extension[key] !== undefined))
+    .map(({ name }) => name);
   if (owners.length > 1) {
     throw new Error(
-      `Convex integration: ${owners.join(" and ")} both set a ${key}. Use one of them, or pass convex({ ${key} }) to choose.`,
+      `Convex integration: ${owners.join(" and ")} both ${label}. Keep one, or pass convex({ ${option} }) to choose.`,
     );
   }
 }
@@ -49,13 +54,14 @@ function checkRoutePaths(extensions: readonly ConvexExtension[]): void {
 }
 
 export function checkExtensions(extensions: readonly ConvexExtension[]): void {
-  checkSingleOwner(extensions, "token");
-  checkSingleOwner(extensions, "provider");
+  checkSingleOwner(extensions, ["token", "siteToken"], "read a visitor token", "token");
+  checkSingleOwner(extensions, ["tokenPath"], "set a browser token path", "tokenPath");
+  checkSingleOwner(extensions, ["provider"], "set a provider", "provider");
   checkServiceOwners(extensions);
   checkRoutePaths(extensions);
 }
 
-export function pickExtensionValue<Key extends "token" | "provider">(
+export function pickExtensionValue<Key extends ExtensionValueKey>(
   extensions: readonly ConvexExtension[],
   key: Key,
 ): ConvexExtension[Key] {

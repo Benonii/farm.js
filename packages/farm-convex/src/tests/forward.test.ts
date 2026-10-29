@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { fetchBetterAuthToken } from "../better-auth.js";
+import { createSiteTokenReader } from "../site-token.js";
 import { forwardRequest } from "../forward.js";
 import { startRecordingServer } from "./recording-server.js";
 
@@ -95,7 +95,9 @@ describe("forwardRequest", () => {
   });
 });
 
-describe("fetchBetterAuthToken", () => {
+describe("createSiteTokenReader", () => {
+  const siteToken = { path: "/api/auth/convex/token", cookie: "session_token=" };
+
   let convexSite: RecordingServer;
 
   beforeAll(async () => {
@@ -114,14 +116,14 @@ describe("fetchBetterAuthToken", () => {
     const request = new Request("https://app.example.com/", {
       headers: { cookie: "theme=dark; better-auth.session_token=valid" },
     });
-    expect(await fetchBetterAuthToken(request, convexSite.url)).toBe("jwt-for-ada");
+    expect(await createSiteTokenReader(siteToken, convexSite.url)(request)).toBe("jwt-for-ada");
     expect(convexSite.requests.at(-1)?.url).toBe("/api/auth/convex/token");
   });
 
   it("skips the network when the visitor has no session cookie", async () => {
     const requestCount = convexSite.requests.length;
     const request = new Request("https://app.example.com/");
-    expect(await fetchBetterAuthToken(request, convexSite.url)).toBeUndefined();
+    expect(await createSiteTokenReader(siteToken, convexSite.url)(request)).toBeUndefined();
     expect(convexSite.requests.length).toBe(requestCount);
   });
 
@@ -129,6 +131,6 @@ describe("fetchBetterAuthToken", () => {
     const request = new Request("https://app.example.com/", {
       headers: { cookie: "better-auth.session_token=expired" },
     });
-    expect(await fetchBetterAuthToken(request, convexSite.url)).toBeUndefined();
+    expect(await createSiteTokenReader(siteToken, convexSite.url)(request)).toBeUndefined();
   });
 });

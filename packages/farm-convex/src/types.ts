@@ -29,6 +29,8 @@ export interface ConvexIntegrationInput {
   provider?: FarmIntegrationProviderComponentReference;
   dev?: boolean | ConvexDevOptions;
   token?: ConvexTokenReader;
+  /** Same-origin path the browser fetches the visitor's Convex token from, such as "/api/auth/token". */
+  tokenPath?: string;
   home?: ConvexHomes;
   functionsDirectory?: string;
   log?: FarmIntegrationLogger;
@@ -47,20 +49,31 @@ export interface ConvexExtensionRoute {
   to?: string;
 }
 
+/** A path on the Convex site URL that turns the visitor's session cookie into a Convex token. */
+export interface ConvexSiteToken {
+  path: string;
+  /** Skip the request unless the cookie header contains this, such as "session_token=". */
+  cookie?: string;
+}
+
 /** A service that lives in Convex, such as auth or billing, wired into Farm by convex({ use }). */
 export interface ConvexExtension {
   name: string;
   /**
    * What kind of service the component is, for the check that it is not also set up in Farm.
-   * An extension with a token or provider counts as auth.
+   * An extension that signs visitors in counts as auth.
    */
   service?: ConvexService;
   /** The Convex component it needs in convex.config.ts, such as "@convex-dev/polar". */
   component?: string;
   routes?: readonly ConvexExtensionRoute[];
-  /** Reads the visitor's Convex token on the server. Only one extension can set it. */
+  /** Reads the visitor's Convex token on the server. Only one extension can sign visitors in. */
   token?: ConvexTokenReader;
-  /** Browser provider used instead of the default one. Only one extension can set it. */
+  /** Reads the visitor's token from a path on the Convex site URL instead of `token`. */
+  siteToken?: ConvexSiteToken;
+  /** Same-origin path the browser fetches the visitor's Convex token from. */
+  tokenPath?: string;
+  /** Browser provider used instead of the default one. */
   provider?: FarmIntegrationProviderComponentReference;
 }
 
@@ -75,6 +88,8 @@ export interface ConvexRuntime extends ConvexDeploymentURLs {
 
 export interface ConvexProviderProps {
   url: string;
+  /** Same-origin path to fetch the visitor's Convex token from; omit for signed-out clients. */
+  tokenPath?: string;
   children?: ReactNode;
 }
 
@@ -117,33 +132,31 @@ export interface ConvexDevState {
 }
 
 /** Options for component(): what Farm should do for a Convex component. */
-export interface ConvexComponentOptions extends Omit<
-  ConvexExtension,
-  "name" | "component" | "routes"
-> {
+export interface ConvexComponentOptions {
   /** Shown in errors and warnings. Defaults to the component's package name. */
   name?: string;
   /** Paths on your domain forwarded to Convex: { "/api/webhooks/resend": "/resend-webhook" }. */
   routes?: Readonly<Record<string, string>> | readonly ConvexExtensionRoute[];
-}
-
-/** Options for a service whose webhooks Farm can receive on your own domain. */
-export interface ConvexWebhookOptions {
   /**
-   * Path on your domain that receives the service's webhooks and forwards them to Convex.
-   * `true` uses /api/webhooks/<service>.
+   * Receive the component's webhooks on your domain. `true` uses /api/webhooks/<name> for a known
+   * component; a string sets the path.
    */
   webhooks?: string | true;
-  /** The webhook path the component registers in convex/http.ts, if you changed its default. */
+  /** The webhook path the component registers in convex/http.ts, if it is not the default. */
   convexPath?: string;
+  token?: ConvexTokenReader;
+  tokenPath?: string;
+  provider?: FarmIntegrationProviderComponentReference;
 }
 
-export interface ConvexWebhookService {
+/** What Farm knows about a well-known Convex component. */
+export interface ConvexKnownComponent {
   name: string;
-  component: string;
   service?: ConvexService;
-  defaultConvexPath: string;
-  defaultWebhookPath: string;
+  routes?: readonly ConvexExtensionRoute[];
+  webhook?: { path: string; convexPath: string };
+  siteToken?: ConvexSiteToken;
+  tokenPath?: string;
 }
 
 export interface ConvexAdapterOptions {

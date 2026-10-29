@@ -44,18 +44,18 @@ Pages that preload Convex data are kept out of Farm's shared page cache.
 
 ## Auth, billing and other services in Convex
 
-`convex()` reads `convex/convex.config.ts` and turns on the helper for each component it knows:
-`@convex-dev/better-auth`, `@convex-dev/polar`, `@convex-dev/stripe`, `@useautumn/convex`,
-`@convex-dev/resend` and `@convex-dev/workos-authkit`. List a helper in `use` to change its
-options; it replaces the detected one.
+`convex()` reads `convex/convex.config.ts` and wires the components it knows: Better Auth
+(`/api/auth/*` on your domain and the visitor's token), Polar, Stripe, Autumn, Resend and WorkOS
+AuthKit. `@farm.js/convex` knows them as data and depends on none of them. List a component with
+`component()` to change what Farm does for it:
 
 ```ts
-import { component, convex, stripe } from "@farm.js/convex";
+import { component, convex } from "@farm.js/convex";
 
 convex({
   use: [
-    stripe({ webhooks: true }), // /api/webhooks/stripe on your domain
-    component("@convex-dev/resend", { routes: { "/api/hooks/email": "/resend-webhook" } }),
+    component("@convex-dev/stripe", { webhooks: true }), // /api/webhooks/stripe on your domain
+    component("@acme/convex-sms", { routes: { "/api/webhooks/sms": "/sms/inbound" } }),
   ],
 });
 ```

@@ -89,7 +89,7 @@ export function stopConvexDev(state: ConvexDevState | undefined): void {
 const DEPLOYMENT_URL_PATTERN = /^(?:VITE_)?CONVEX_URL=\S/m;
 
 /** Tell the developer to restart once convex dev has written the new deployment's URL. */
-export function announceNewDeployment(root: string): () => void {
+export function announceNewDeployment(root: string, interval = 500): () => void {
   const filePath = path.join(root, ".env.local");
   console.warn(
     "[farm:convex] CONVEX_URL is not set yet. convex dev will create a deployment; restart farm dev when it is ready.",
@@ -99,7 +99,7 @@ export function announceNewDeployment(root: string): () => void {
     unwatchFile(filePath, check);
     console.log("[farm:convex] Convex deployment is ready. Restart farm dev to connect to it.");
   };
-  watchFile(filePath, { interval: 500 }, check);
+  watchFile(filePath, { interval }, check);
   return () => unwatchFile(filePath, check);
 }
 

@@ -134,9 +134,8 @@ The component receives the deployment URL as `url`. Use `readConvexReactClient(u
 ## Services that live in Convex
 
 Convex apps often run auth, billing, and email inside Convex as components. `convex()` reads the
-components installed in `convex/convex.config.ts` and turns on a helper for each one it knows, so
-nothing else is registered in Farm. With `@convex-dev/better-auth` installed, this is the whole
-config:
+components installed in `convex/convex.config.ts` and wires the ones it knows, so nothing else is
+registered in Farm. With `@convex-dev/better-auth` installed, this is the whole config:
 
 **farm.config.ts**
 
@@ -151,57 +150,36 @@ export default defineConfig({
 });
 ```
 
-To change a helper's options, list it in `use`. An entry in `use` replaces the detected helper for
-the same component, and `detect: false` turns detection off:
+`@farm.js/convex` knows these components as data, with no code or dependencies from them:
+
+| Convex component             | What Farm adds                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| `@convex-dev/better-auth`    | `/api/auth/*` on your domain, the visitor's token on the server and in the browser |
+| `@convex-dev/polar`          | Billing; webhooks on your domain with `webhooks: true` (to `/polar/events`)        |
+| `@convex-dev/stripe`         | Billing; webhooks on your domain with `webhooks: true` (to `/stripe/webhook`)      |
+| `@useautumn/convex`          | Billing                                                                            |
+| `@convex-dev/resend`         | Webhooks on your domain with `webhooks: true` (to `/resend-webhook`)               |
+| `@convex-dev/workos-authkit` | Webhooks on your domain with `webhooks: true` (to `/workos/webhook`)               |
+
+To change what Farm does for a component, list it with `component()` in `use`. An entry replaces
+the detected one for the same component, `detect: false` turns detection off, and a service whose
+`home` is `"farm"` is never detected:
 
 ```ts
-import { betterAuth, convex, stripe } from "@farm.js/convex";
+import { component, convex } from "@farm.js/convex";
 
-convex({ use: [stripe({ webhooks: true })] }); // Better Auth is still detected
-convex({ detect: false, use: [betterAuth()] }); // only what is listed
+convex({ use: [component("@convex-dev/polar", { webhooks: true })] }); // Better Auth is still detected
+convex({ detect: false, use: [component("@convex-dev/better-auth")] }); // only what is listed
 ```
-
-A service whose `home` is `"farm"` is never detected. Every helper is exported from
-`@farm.js/convex` and from its own path, such as `@farm.js/convex/stripe`.
-
-| Extension                                         | Convex component             | What Farm adds                                                               |
-| ------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
-| `betterAuth()` from `@farm.js/convex/better-auth` | `@convex-dev/better-auth`    | `/api/auth/*` on your domain, the visitor's token, the browser provider      |
-| `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`          | Billing; optional webhook route forwarded to `/polar/events`                 |
-| `stripe()` from `@farm.js/convex/stripe`          | `@convex-dev/stripe`         | Billing; optional webhook route forwarded to `/stripe/webhook`               |
-| `autumn()` from `@farm.js/convex/autumn`          | `@useautumn/convex`          | Billing                                                                      |
-| `resend()` from `@farm.js/convex/resend`          | `@convex-dev/resend`         | Optional webhook route forwarded to `/resend-webhook`                        |
-| `workosAuthKit()` from `@farm.js/convex/workos`   | `@convex-dev/workos-authkit` | Optional webhook route forwarded to `/workos/webhook`; works with `workos()` |
-| `component(name, options)` from `@farm.js/convex` | Any component                | Whatever you pass: routes, ownership, token, provider                        |
-
-Every helper with a webhook takes the same two options: `webhooks`, the path on your domain to
-give the provider's dashboard (`true` uses `/api/webhooks/<service>`), and `convexPath`, if you
-registered the component's route somewhere other than its default:
-
-```ts
-convex({
-  use: [
-    stripe({ webhooks: true }), // https://<your-app>/api/webhooks/stripe
-    resend({ webhooks: "/hooks/email" }),
-  ],
-});
-```
-
-The body and signature headers reach Convex unchanged, so each component verifies its webhooks as
-usual. Without `webhooks`, point the provider at your `.convex.site` URL directly.
-
-Each service can have only one owner. Two extensions that own the same service, or an extension
-next to a Farm integration for the same service, stop `farm dev` and `farm build` with an error.
-When an extension's component is missing from `convex.config.ts`, Farm prints a warning.
 
 ### Auth with Better Auth running in Convex
 
-When `@convex-dev/better-auth` is in `convex.config.ts`, `convex()` turns on `betterAuth()`. It
-forwards `/api/auth/*` to the component on your Convex site URL. Sign-in happens on your own domain, so session cookies are first-party and
-server-rendered pages know who is signed in. The extension also exchanges the visitor's session
-cookie for a Convex token, so `preloadQuery` and the other server helpers run as the signed-in
-user, and wraps the app in `ConvexBetterAuthProvider` so live queries do too. Visitors without a
-session cookie cost no network call.
+When `@convex-dev/better-auth` is in `convex.config.ts`, Farm forwards `/api/auth/*` to the
+component on your Convex site URL. Sign-in happens on your own domain, so session cookies are
+first-party and server-rendered pages know who is signed in. On the server, Farm exchanges the
+visitor's session cookie for a Convex token, so `preloadQuery` and the other server helpers run as
+the signed-in user; visitors without a session cookie cost no network call. In the browser, the
+live Convex connection fetches the same token from `/api/auth/convex/token`.
 
 Do not register `@farm.js/better-auth` or set `auth: true` as well: Convex owns auth here.
 
@@ -228,28 +206,38 @@ export const createAuth = (context: GenericCtx<DataModel>) =>
   });
 ```
 
-In the browser, sign in with the auth client from `@farm.js/convex/better-auth/client`. It calls
-your own domain:
+Register the component's routes in `convex/http.ts`:
 
-**src/components/SignInForm.tsx**
+**convex/http.ts**
 
-```tsx
-"use client";
+```ts
+import { httpRouter } from "convex/server";
+import { authComponent, createAuth } from "./auth";
 
-import { authClient } from "@farm.js/convex/better-auth/client";
-
-export function SignInButton() {
-  return (
-    <button onClick={() => authClient.signIn.email({ email: "ada@example.com", password: "..." })}>
-      Sign in
-    </button>
-  );
-}
+const http = httpRouter();
+authComponent.registerRoutes(http, createAuth);
+export default http;
 ```
 
-To use Better Auth client plugins of your own, create your client with
-`createAuthClient({ plugins: [convexClient(), ...] })` and pass a [`provider`](#choose-client-ownership)
-that wraps the app in `ConvexBetterAuthProvider` with it.
+In the browser, use Better Auth's own client. It calls your domain:
+
+**src/lib/auth-client.ts**
+
+```ts
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient();
+```
+
+The live Convex connection checks the visitor's token when the page loads and when the window
+regains focus. After signing in or out without a page load, call `refreshConvexAuth()`:
+
+```ts
+import { refreshConvexAuth } from "@farm.js/convex/client";
+
+await authClient.signIn.email({ email, password });
+refreshConvexAuth();
+```
 
 Because sign-in goes through your domain, OAuth providers call back to
 `https://<your-app>/api/auth/callback/<provider>`. Update the callback URL in each provider's
@@ -262,87 +250,151 @@ browser sent with the host it actually used.
 
 ### Billing with Polar running in Convex
 
-With `@convex-dev/polar`, checkout, the customer portal, and subscription data all live in Convex,
-and you call them from Convex functions. Farm has nothing to mount unless you want Polar's webhooks
-on your own domain. `polar({ webhooks })` forwards that path to the route the component registers
-with `polar.registerRoutes(http)`:
+With `@convex-dev/polar`, checkout, the customer portal, and subscription data live in Convex. The
+`Polar` instance needs explicit types, because `getUserInfo` reads a query from the same file:
+
+**convex/billing.ts**
 
 ```ts
-convex({ use: [polar({ webhooks: "/api/webhooks/polar" })] });
+import { Polar } from "@convex-dev/polar";
+import { api, components } from "./_generated/api";
+import type { DataModel } from "./_generated/dataModel";
+import { query } from "./_generated/server";
+
+type BillingUser = { userId: string; email: string } | null;
+
+export const me = query({
+  args: {},
+  handler: async (ctx): Promise<BillingUser> => {
+    const identity = await ctx.auth.getUserIdentity();
+    return identity ? { userId: identity.subject, email: identity.email ?? "" } : null;
+  },
+});
+
+export const polar: Polar<DataModel, { pro: string }> = new Polar(components.polar, {
+  products: { pro: "prod_123" },
+  getUserInfo: async (ctx): Promise<{ userId: string; email: string }> => {
+    const user: BillingUser = await ctx.runQuery(api.billing.me);
+    if (!user) throw new Error("Sign in first");
+    return user;
+  },
+});
+
+export const { generateCheckoutLink, generateCustomerPortalUrl } = polar.api();
 ```
 
-Then use `https://<your-app>/api/webhooks/polar` as the webhook URL in Polar. The body and
-signature headers reach Convex unchanged, so the component verifies them as usual. If you
-registered the component's routes on a custom path, pass it as `convexPath`. Without `webhooks`,
-point Pol### Add any other Convex component
-
-For a component without a helper above, `component()` wires it into Farm without writing an
-extension. Name its package,
-then map paths on your domain to the routes the component registers in `convex/http.ts`:
+Add `polar.registerRoutes(http)` to `convex/http.ts`. To give Polar a webhook URL on your own
+domain, turn on webhooks for the component:
 
 ```ts
-import { betterAuth, component, convex } from "@farm.js/convex";
+convex({ use: [component("@convex-dev/polar", { webhooks: true })] });
+```
+
+Then use `https://<your-app>/api/webhooks/polar` in Polar. The body and signature headers reach
+Convex unchanged, so the component verifies them as usual. If you registered the routes on a
+custom path, pass it as `convexPath`. Without `webhooks`, point Polar at
+`https://<deployment>.convex.site/polar/events` directly.
+
+### Add any other Convex component
+
+Install and use any component in `convex/` as its docs describe; Farm needs nothing for most of
+them. List a component with `component()` only when Farm should do something for it, usually to
+receive its webhooks on your domain:
+
+```ts
+import { component, convex } from "@farm.js/convex";
 
 convex({
   use: [
-    betterAuth(),
-    component("@convex-dev/resend", {
-      routes: { "/api/webhooks/resend": "/resend-webhook" },
-    }),
-    component("@convex-dev/rate-limiter"),
+    component("@acme/convex-sms", { routes: { "/api/webhooks/sms": "/sms/inbound" } }),
+    component("@convex-dev/rate-limiter"), // warns if it is missing from convex.config.ts
   ],
 });
 ```
 
-Farm warns at startup when a listed component is missing from `convex.config.ts`, and forwards
-each route's method, query, headers, and body unchanged. The component's own settings, such as
-products, API keys, or schedules, stay in your `convex/` code and `npx convex env set`, because
-that code runs on Convex.
+| Option       | Use                                                                                    |
+| ------------ | -------------------------------------------------------------------------------------- |
+| `routes`     | `{ "/path/on/your/domain": "/path/on/convex" }`, or full route objects with `methods`. |
+| `webhooks`   | `true` for a known component's default paths, or a path on your domain.                |
+| `convexPath` | The webhook path on Convex, for a custom or unknown component.                         |
+| `name`       | Shown in errors and warnings. Defaults to the package name.                            |
+| `token`      | Reads the visitor's Convex token on the server. The component then counts as auth.     |
+| `tokenPath`  | Same-origin path the browser fetches the visitor's Convex token from.                  |
+| `provider`   | A browser provider used instead of the default one.                                    |
 
-| Option     | Use                                                                                    |
-| ---------- | -------------------------------------------------------------------------------------- |
-| `routes`   | `{ "/path/on/your/domain": "/path/on/convex" }`, or full route objects with `methods`. |
-| `name`     | Shown in errors and warnings. Defaults to the package name.                            |
-| `token`    | Reads the visitor's Convex token on the server. The component then counts as auth.     |
-| `provider` | A browser provider used instead of the default one.                                    |
+A `token`, `tokenPath`, or `provider` passed to `convex()` directly wins over a component's.
 
-### Write your own extension
+## Auth that lives in Farm
 
-`component()` returns a plain extension object. To publish a reusable one, such as `polar()`,
-return the object yourself:
+Auth can stay in Farm while Convex holds app data. Convex then trusts tokens signed by your app.
+With Better Auth in Farm, add its JWT plugin:
+
+**src/lib/auth.ts**
 
 ```ts
-import type { ConvexExtension } from "@farm.js/convex";
+import { betterAuth } from "better-auth";
+import { jwt } from "better-auth/plugins";
 
-export function resend(): ConvexExtension {
-  return {
-    name: "resend",
-    component: "@convex-dev/resend",
-    routes: [{ path: "/api/webhooks/resend", methods: ["POST"], to: "/resend-webhook" }],
-  };
-}
+export const auth = betterAuth({
+  // database, secret, baseURL, providers ...
+  plugins: [jwt({ jwks: { keyPairConfig: { alg: "RS256" } } })],
+});
 ```
 
-| Field       | Use                                                                                                                     |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `name`      | Shown in errors and warnings.                                                                                           |
-| `service`   | `"auth"` or `"billing"`, for the check that the service is not also set up in Farm. A `token` or `provider` means auth. |
-| `component` | The component it needs in `convex.config.ts`. Farm warns when it is missing.                                            |
-| `routes`    | Paths on your domain forwarded to the Convex site URL. `to` sets the Convex path.                                       |
-| `token`     | Reads the visitor's Convex token on the server. Only one extension can set it.                                          |
-| `provider`  | A browser provider used instead of the default one. Only one extension can set it.                                      |
+**farm.config.ts**
 
-A `token` or `provider` passed to `convex()` directly wins over an extension's.
+```ts
+import { defineConfig } from "@farm.js/core";
+import { betterAuth } from "@farm.js/better-auth";
+import { convex } from "@farm.js/convex";
+import { auth } from "./src/lib/auth";
 
-fault one. Only one extension can set it. |
+export default defineConfig({
+  integrations: {
+    auth: betterAuth({ instance: auth }),
+    convex: convex({
+      token: async (request) => {
+        try {
+          return (await auth.api.getToken({ headers: request.headers })).token;
+        } catch {
+          return undefined;
+        }
+      },
+      tokenPath: "/api/auth/token",
+    }),
+  },
+});
+```
 
-A `token` or `provider` passed to `convex()` directly wins over an extension's.
+**convex/auth.config.ts**
+
+```ts
+import type { AuthConfig } from "convex/server";
+
+export default {
+  providers: [
+    {
+      type: "customJwt",
+      issuer: process.env.SITE_URL,
+      applicationID: process.env.SITE_URL,
+      jwks: `${process.env.SITE_URL}/api/auth/jwks`,
+      algorithm: "RS256",
+    },
+  ],
+} satisfies AuthConfig;
+```
+
+Set `SITE_URL` on the Convex deployment to your app's URL. Convex fetches the keys from your app,
+so a cloud deployment cannot reach an app on `localhost`; develop against a local deployment
+(`CONVEX_AGENT_MODE=anonymous`) or a tunnel. Convex functions read the user with
+`ctx.auth.getUserIdentity()`, and the token's `subject` is the Better Auth user ID.
 
 ## Auth with a hosted provider
 
 For Clerk, WorkOS, Auth0, or another provider that issues its own JWTs, configure the provider in
 Convex's `auth.config.ts` as Convex's docs describe, then give `convex()` a `token` reader that
-returns the visitor's token for a request:
+returns the visitor's token for a request. In the browser, pass the provider your auth SDK
+documents for Convex, such as `ConvexProviderWithClerk`, as `convex({ provider })`:
 
 **farm.config.ts**
 
@@ -376,7 +428,7 @@ stop with an error that names the `home` option.
 | In Convex                                                      | In Farm                                     | Result   |
 | -------------------------------------------------------------- | ------------------------------------------- | -------- |
 | `@convex-dev/workos-authkit`                                   | `workos()`                                  | Together |
-| `@convex-dev/better-auth` or `use: [betterAuth()]`             | Any auth integration, or `auth: true`       | Conflict |
+| `@convex-dev/better-auth`                                      | Any auth integration, or `auth: true`       | Conflict |
 | `@convex-dev/workos-authkit`                                   | Any other auth integration, or `auth: true` | Conflict |
 | `@convex-dev/polar`, `@convex-dev/stripe`, `@useautumn/convex` | `polar()`, `stripe()`, or `autumn()`        | Conflict |
 

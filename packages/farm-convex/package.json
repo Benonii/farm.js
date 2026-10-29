@@ -33,34 +33,6 @@
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js"
     },
-    "./better-auth": {
-      "types": "./dist/better-auth.d.ts",
-      "import": "./dist/better-auth.js"
-    },
-    "./better-auth/client": {
-      "types": "./dist/better-auth/client.d.ts",
-      "import": "./dist/better-auth/client.js"
-    },
-    "./polar": {
-      "types": "./dist/polar.d.ts",
-      "import": "./dist/polar.js"
-    },
-    "./stripe": {
-      "types": "./dist/stripe.d.ts",
-      "import": "./dist/stripe.js"
-    },
-    "./autumn": {
-      "types": "./dist/autumn.d.ts",
-      "import": "./dist/autumn.js"
-    },
-    "./resend": {
-      "types": "./dist/resend.d.ts",
-      "import": "./dist/resend.js"
-    },
-    "./workos": {
-      "types": "./dist/workos.d.ts",
-      "import": "./dist/workos.js"
-    },
     "./functions": {
       "types": "./dist/functions.d.ts",
       "import": "./dist/functions.js"
@@ -89,10 +61,8 @@
     "unstorage": "2.0.0-alpha.10"
   },
   "devDependencies": {
-    "@convex-dev/better-auth": "0.12.5",
     "@types/node": "^22.20.5",
     "@types/react": "^18.2.45",
-    "better-auth": "1.6.11",
     "convex": "1.48.0",
     "react": "19.2.8",
     "typescript": "^5.3.3",
@@ -100,18 +70,8 @@
     "vitest": "5.0.5"
   },
   "peerDependencies": {
-    "@convex-dev/better-auth": "^0.12.5",
-    "better-auth": "^1.6.11",
     "convex": "^1.25.0",
     "react": "^18.2.0 || ^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@convex-dev/better-auth": {
-      "optional": true
-    },
-    "better-auth": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=22.13.0"

@@ -1,42 +1,70 @@
-import type { ConvexComponentOptions, ConvexExtension, ConvexExtensionRoute } from "./types.js";
-import type { ConvexService, ConvexWebhookOptions, ConvexWebhookService } from "./types.js";
+import { KNOWN_COMPONENTS } from "./known.js";
 
-function toRoutes(routes: ConvexComponentOptions["routes"]): readonly ConvexExtensionRoute[] {
+import type { ConvexComponentOptions, ConvexExtension, ConvexExtensionRoute } from "./types.js";
+import type { ConvexKnownComponent, ConvexService } from "./types.js";
+
+function toRoutes(routes: ConvexComponentOptions["routes"]): ConvexExtensionRoute[] {
   if (!routes) return [];
-  if (Array.isArray(routes)) return routes;
+  if (Array.isArray(routes)) return [...routes];
   return Object.entries(routes).map(([path, to]) => ({ path, to }));
 }
 
-/** Any Convex component, such as "@convex-dev/resend", wired into Farm by convex({ use }). */
+function toWebhookRoute(
+  packageName: string,
+  known: ConvexKnownComponent | undefined,
+  { webhooks, convexPath }: ConvexComponentOptions,
+): ConvexExtensionRoute[] {
+  if (!webhooks) return [];
+  const to = convexPath ?? known?.webhook?.convexPath;
+  const path = webhooks === true ? known?.webhook?.path : webhooks;
+  if (!to || !path) {
+    throw new TypeError(
+      `component("${packageName}") has no default webhook paths. Pass webhooks: "/your/path" and convexPath.`,
+    );
+  }
+  return [{ path, methods: ["POST"], to }];
+}
+
+function withoutUndefined(extension: ConvexExtension): ConvexExtension {
+  return Object.fromEntries(
+    Object.entries(extension).filter(([, value]) => value !== undefined),
+  ) as unknown as ConvexExtension;
+}
+
+/**
+ * Any Convex component, wired into Farm by convex({ use }). Well-known components, such as
+ * "@convex-dev/better-auth" or "@convex-dev/stripe", come with their routes and defaults.
+ */
 export function component(
   packageName: string,
-  { name, routes, ...options }: ConvexComponentOptions = {},
+  options: ConvexComponentOptions = {},
 ): ConvexExtension {
   if (!packageName.trim()) throw new TypeError("component() needs the component's package name.");
-  return {
-    ...options,
-    name: name ?? packageName,
+  const known = KNOWN_COMPONENTS[packageName];
+  return withoutUndefined({
+    name: options.name ?? known?.name ?? packageName,
     component: packageName,
-    routes: toRoutes(routes),
-  };
-}
-
-/** A component whose webhooks can arrive on your own domain and go on to Convex. */
-export function webhookComponent(
-  service: ConvexWebhookService,
-  options: ConvexWebhookOptions = {},
-): ConvexExtension {
-  const to = options.convexPath ?? service.defaultConvexPath;
-  const path = options.webhooks === true ? service.defaultWebhookPath : options.webhooks;
-  const extension = component(service.component, {
-    name: service.name,
-    routes: path ? [{ path, methods: ["POST"], to }] : [],
+    service: known?.service,
+    routes: [
+      ...(known?.routes ?? []),
+      ...toRoutes(options.routes),
+      ...toWebhookRoute(packageName, known, options),
+    ],
+    token: options.token,
+    siteToken: options.token ? undefined : known?.siteToken,
+    tokenPath: options.tokenPath ?? known?.tokenPath,
+    provider: options.provider,
   });
-  return service.service ? { ...extension, service: service.service } : extension;
 }
 
-/** The kind of service an extension provides; sign-in (a token or provider) means auth. */
+/** Whether an extension signs visitors in: a token, a site token, a token path or a provider. */
+export function signsVisitorsIn(extension: ConvexExtension): boolean {
+  return Boolean(
+    extension.token || extension.siteToken || extension.tokenPath || extension.provider,
+  );
+}
+
+/** The kind of service an extension provides; signing visitors in means auth. */
 export function readExtensionService(extension: ConvexExtension): ConvexService | undefined {
-  if (extension.service) return extension.service;
-  return extension.token || extension.provider ? "auth" : undefined;
+  return extension.service ?? (signsVisitorsIn(extension) ? "auth" : undefined);
 }

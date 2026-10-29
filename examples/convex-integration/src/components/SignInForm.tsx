@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { authClient } from "@farm.js/convex/better-auth/client";
+import { authClient } from "../lib/auth-client";
 
 export function SignInForm() {
   const [status, setStatus] = useState("");

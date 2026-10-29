@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { announceNewDeployment } from "../dev.js";
 import { convex } from "../index.js";
-import { stripe } from "../stripe.js";
+import { component } from "../component.js";
 
 const url = "https://happy-otter-123.convex.cloud";
 
@@ -39,15 +39,20 @@ describe("detecting services from convex.config.ts", () => {
     useAppRoot();
     const integration = convex({ url, dev: false });
     expect(integration.routes?.map((route) => route.path)).toEqual(["/api/auth/[...auth]"]);
+    expect(integration.providers?.[0]?.props).toEqual({ url, tokenPath: "/api/auth/convex/token" });
     expect(integration.providers?.[0]?.component).toEqual({
-      module: "@farm.js/convex/better-auth/client",
-      export: "ConvexBetterAuthProvider",
+      module: "@farm.js/convex/client",
+      export: "ConvexClientProvider",
     });
   });
 
   it("lets an entry in `use` replace the detected helper for the same component", () => {
     useAppRoot();
-    const integration = convex({ url, dev: false, use: [stripe({ webhooks: true })] });
+    const integration = convex({
+      url,
+      dev: false,
+      use: [component("@convex-dev/stripe", { webhooks: true })],
+    });
     expect(integration.routes?.map((route) => route.path)).toEqual([
       "/api/auth/[...auth]",
       "/api/webhooks/stripe",
@@ -58,10 +63,7 @@ describe("detecting services from convex.config.ts", () => {
     useAppRoot();
     const integration = convex({ url, dev: false, detect: false });
     expect(integration.routes ?? []).toEqual([]);
-    expect(integration.providers?.[0]?.component).toEqual({
-      module: "@farm.js/convex/client",
-      export: "ConvexClientProvider",
-    });
+    expect(integration.providers?.[0]?.props).toEqual({ url });
   });
 
   it("skips a detected service whose home is Farm", () => {
@@ -94,7 +96,7 @@ describe("a new app without a deployment", () => {
     const root = mkdtempSync(path.join(tmpdir(), "farm-convex-first-run-"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    const stop = announceNewDeployment(root);
+    const stop = announceNewDeployment(root, 20);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("CONVEX_URL is not set yet"));
     writeFileSync(path.join(root, ".env.local"), "CONVEX_URL=http://127.0.0.1:3210\n");
     await vi.waitFor(

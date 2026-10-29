@@ -5,11 +5,24 @@ import { detectExtensions, mergeExtensions } from "./detect.js";
 import { hasDeploymentURL, resolveDeploymentURLs } from "./environment.js";
 import { checkExtensions, createExtensionRoutes, pickExtensionValue } from "./extensions.js";
 import { setConvexRuntime } from "./runtime.js";
+import { createSiteTokenReader } from "./site-token.js";
 
-import type { ConvexIntegrationInput } from "./types.js";
+import type { ConvexExtension, ConvexIntegrationInput, ConvexTokenReader } from "./types.js";
 
 const DEFAULT_PROVIDER = { module: "@farm.js/convex/client", export: "ConvexClientProvider" };
 const DEFAULT_FUNCTIONS_DIRECTORY = "convex";
+
+function resolveTokenReader(
+  input: ConvexIntegrationInput,
+  extensions: readonly ConvexExtension[],
+  siteURL: string,
+): ConvexTokenReader | undefined {
+  if (input.token) return input.token;
+  const token = pickExtensionValue(extensions, "token");
+  if (token) return token;
+  const siteToken = pickExtensionValue(extensions, "siteToken");
+  return siteToken ? createSiteTokenReader(siteToken, siteURL) : undefined;
+}
 
 function isDevelopment(): boolean {
   const mode = process.env.NODE_ENV;
@@ -52,7 +65,8 @@ export function convex(input: ConvexIntegrationInput = {}) {
   const urls = resolveDeploymentURLs(input);
   const extensions = resolveExtensions(input, functionsDirectory);
   checkExtensions(extensions);
-  setConvexRuntime({ ...urls, token: input.token ?? pickExtensionValue(extensions, "token") });
+  setConvexRuntime({ ...urls, token: resolveTokenReader(input, extensions, urls.siteURL) });
+  const tokenPath = input.tokenPath ?? pickExtensionValue(extensions, "tokenPath");
   return defineIntegration({
     category: "database",
     type: "convex",
@@ -63,7 +77,7 @@ export function convex(input: ConvexIntegrationInput = {}) {
       {
         name: "convex-provider",
         type: "convex",
-        props: { url: urls.url },
+        props: tokenPath ? { url: urls.url, tokenPath } : { url: urls.url },
         supportsIsolatedHydration: true,
         component: input.provider ?? pickExtensionValue(extensions, "provider") ?? DEFAULT_PROVIDER,
       },
@@ -79,20 +93,14 @@ export function convex(input: ConvexIntegrationInput = {}) {
   });
 }
 
-export { autumn } from "./autumn.js";
-export { betterAuth } from "./better-auth.js";
 export { component } from "./component.js";
-export { polar } from "./polar.js";
-export { resend } from "./resend.js";
-export { stripe } from "./stripe.js";
-export { workosAuthKit } from "./workos.js";
+export { KNOWN_COMPONENTS } from "./known.js";
 export { convexRateLimitStorage } from "./rate-limit.js";
 export { convexStorage } from "./storage.js";
 export { CONVEX_PAIRS } from "./pairs.js";
 export type {
   ConvexAdapterOptions,
   ConvexComponentOptions,
-  ConvexWebhookOptions,
   ConvexDevOptions,
   ConvexExtension,
   ConvexExtensionRoute,
@@ -101,5 +109,6 @@ export type {
   ConvexPair,
   ConvexService,
   ConvexServiceSide,
+  ConvexSiteToken,
   ConvexTokenReader,
 } from "./types.js";

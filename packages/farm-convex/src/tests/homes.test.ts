@@ -3,11 +3,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { betterAuth } from "../better-auth.js";
+import { component } from "../component.js";
 import { checkServiceHomes, findConvexComponents, findFarmIntegrations } from "../homes.js";
-import { polar } from "../polar.js";
-import { stripe } from "../stripe.js";
-import { workosAuthKit } from "../workos.js";
 
 const POLAR_AND_BETTER_AUTH_CONFIG = `import { defineApp } from "convex/server";
 import betterAuth from "@convex-dev/better-auth/convex.config";
@@ -94,7 +91,7 @@ describe("checkServiceHomes", () => {
   it("accepts auth and billing extensions whose components are installed", () => {
     const root = createAppRoot(POLAR_AND_BETTER_AUTH_CONFIG);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const extensions = [betterAuth(), polar()];
+    const extensions = [component("@convex-dev/better-auth"), component("@convex-dev/polar")];
     expect(() =>
       checkServiceHomes({ root, integrations: {} }, "convex", {}, extensions),
     ).not.toThrow();
@@ -105,31 +102,35 @@ describe("checkServiceHomes", () => {
   it("stops when an extension provides a service that a Farm integration also provides", () => {
     const root = createAppRoot();
     const integrations = { auth: { type: "better-auth" } };
-    expect(() => checkServiceHomes({ root, integrations }, "convex", {}, [betterAuth()])).toThrow(
-      /auth is set up in Convex \(@convex-dev\/better-auth\) and in Farm \(better-auth\)/,
-    );
+    expect(() =>
+      checkServiceHomes({ root, integrations }, "convex", {}, [
+        component("@convex-dev/better-auth"),
+      ]),
+    ).toThrow(/auth is set up in Convex \(@convex-dev\/better-auth\) and in Farm \(better-auth\)/);
   });
 
   it("lets WorkOS AuthKit in Convex run with Farm's WorkOS sign-in", () => {
     const root = createAppRoot(`import authKit from "@convex-dev/workos-authkit/convex.config";\n`);
     const integrations = { auth: { type: "workos" } };
     expect(() =>
-      checkServiceHomes({ root, integrations }, "convex", {}, [workosAuthKit()]),
+      checkServiceHomes({ root, integrations }, "convex", {}, [
+        component("@convex-dev/workos-authkit"),
+      ]),
     ).not.toThrow();
   });
 
   it("stops when Stripe lives in Convex and Farm's stripe() is registered too", () => {
     const root = createAppRoot(`import stripe from "@convex-dev/stripe/convex.config";\n`);
     const integrations = { billing: { type: "stripe" } };
-    expect(() => checkServiceHomes({ root, integrations }, "convex", {}, [stripe()])).toThrow(
-      /billing is set up in Convex \(@convex-dev\/stripe\) and in Farm \(stripe\)/,
-    );
+    expect(() =>
+      checkServiceHomes({ root, integrations }, "convex", {}, [component("@convex-dev/stripe")]),
+    ).toThrow(/billing is set up in Convex \(@convex-dev\/stripe\) and in Farm \(stripe\)/);
   });
 
   it("warns when an extension's component is not in convex.config.ts", () => {
     const root = createAppRoot(`import { defineApp } from "convex/server";\n`);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    checkServiceHomes({ root, integrations: {} }, "convex", {}, [polar()]);
+    checkServiceHomes({ root, integrations: {} }, "convex", {}, [component("@convex-dev/polar")]);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining(
         "polar (@convex-dev/polar) is in convex({ use }) but not in convex.config.ts",

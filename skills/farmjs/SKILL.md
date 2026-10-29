@@ -352,9 +352,8 @@ Current integration families include AI, Stripe, Autumn, Polar, Resend, Trigger.
 Unkey, Cloudflare agents, Eve, Auth0, Auth.js, Better Auth, Clerk, Supabase, WorkOS, Convex
 (`@farm.js/convex`, installed with `pnpm add`, not `farm add`), custom integrations, UI
 registries, and ORM-backed data. Auth, billing or email that runs inside Convex is detected from
-`convex/convex.config.ts` by `convex()`, or listed in `convex({ use })` (`betterAuth`, `polar`,
-`stripe`, `autumn`, `resend`, `workosAuthKit`, `component()` from `@farm.js/convex`), never as a
-second Farm integration.
+`convex/convex.config.ts` by `convex()`, or listed with `component()` in `convex({ use })`; never
+a second Farm integration. Auth that stays in Farm gives `convex()` a `token` reader and `tokenPath`.
 
 Provider adapters support two ownership modes: pass credentials so the adapter constructs its
 default SDK, or pass an app-owned vendor client through `instance`. Keep the vendor instance in a
