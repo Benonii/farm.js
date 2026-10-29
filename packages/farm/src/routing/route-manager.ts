@@ -29,8 +29,16 @@ import type {
 import {
   createProgrammaticRouteModuleId,
   getProgrammaticRouteSearchClientOptions,
+  normalizeProgrammaticRoutePath,
   parseProgrammaticRoutePath,
+  trackProgrammaticRouteSources,
 } from "../routes-shared";
+import {
+  createEvaluatedRouteGraph,
+  mergeProgrammaticClientRoutes,
+  resolveProgrammaticClientRoutes,
+  type ProgrammaticClientRoutes,
+} from "../programmatic-routes-client";
 import { loadProgrammaticRouteManifests } from "../routes.server";
 import {
   createFarmMarkdownRouteModuleFromFile,
@@ -39,6 +47,7 @@ import {
   resolveFarmMdxComponentsModulePath,
   resolveMdxConfig,
 } from "../app-markdown";
+import { realpathSync } from "fs";
 import path from "path";
 import type { ViteDevServer } from "vite";
 import { toFileModuleUrl } from "../utils/file-module";
@@ -260,6 +269,7 @@ export class RouteManager {
   private redirects: Map<string, RedirectEntry> = new Map();
   private programmaticPages: Map<string, ProgrammaticPageRoute> = new Map();
   private programmaticLayouts: Map<string, ProgrammaticLayoutRoute> = new Map();
+  private programmaticClientRoutes: ProgrammaticClientRoutes = mergeProgrammaticClientRoutes([]);
   private rendererRuntime?: FarmServerRendererRuntime;
   private viteServer?: ViteDevServer;
   private clientManifestCache?: {
@@ -271,6 +281,9 @@ export class RouteManager {
   constructor(config: Required<FarmConfig>, viteServer?: ViteDevServer) {
     this.config = config;
     this.viteServer = viteServer;
+    // Record where route definitions are made from the first module the server evaluates, so
+    // the client build can keep every module that defines routes out of the browser.
+    if (viteServer) trackProgrammaticRouteSources();
   }
 
   setRendererRuntime(rendererRuntime: FarmServerRendererRuntime): void {
@@ -296,10 +309,12 @@ export class RouteManager {
     this.programmaticPages.clear();
     this.programmaticLayouts.clear();
 
+    const programmaticClientRoutes: ProgrammaticClientRoutes[] = [];
     for (const source of getFarmSourceRoots(this.config)) {
       await this.discoverFileRoutes(source);
-      await this.discoverProgrammaticRoutes(source);
+      await this.discoverProgrammaticRoutes(source, programmaticClientRoutes);
     }
+    this.programmaticClientRoutes = mergeProgrammaticClientRoutes(programmaticClientRoutes);
 
     for (const slot of this.routeSlots.values()) {
       if (slot.interception && !this.pageRouteShapes.has(getRoutePatternShape(slot.pattern))) {
@@ -901,6 +916,14 @@ export class RouteManager {
     }
   }
 
+  /**
+   * Where each programmatic page and layout's component lives, read from the evaluated routes
+   * files. The client build imports those modules instead of the routes files.
+   */
+  getProgrammaticClientRoutes(): ProgrammaticClientRoutes {
+    return this.programmaticClientRoutes;
+  }
+
   /** @internal Client modules selected by the compiled hydration ownership plan. */
   getIsolatedClientBoundaryModules(projectRoot: string = this.config.root): ReadonlySet<string> {
     const normalizedProjectRoot = path.resolve(projectRoot);
@@ -1211,14 +1234,29 @@ export class RouteManager {
     }
   }
 
-  private async discoverProgrammaticRoutes(source: FarmSourceRoot): Promise<void> {
+  private async discoverProgrammaticRoutes(
+    source: FarmSourceRoot,
+    clientRoutes: ProgrammaticClientRoutes[],
+  ): Promise<void> {
+    if (this.viteServer) trackProgrammaticRouteSources();
     const manifests = await loadProgrammaticRouteManifests({
       root: source.root,
       srcDir: source.srcDir,
       loadModule: (filePath) => this.loadProgrammaticRoutesModule(filePath),
     });
 
+    const graph = this.viteServer ? createEvaluatedRouteGraph(this.viteServer) : undefined;
     for (const { filePath, manifest } of manifests) {
+      if (graph) {
+        clientRoutes.push(
+          resolveProgrammaticClientRoutes({
+            graph,
+            routesFile: toRealPath(filePath),
+            routes: manifest.routes,
+            normalizeRoutePath: normalizeProgrammaticRoutePath,
+          }),
+        );
+      }
       for (const definition of manifest.routes) {
         if (definition.kind === "page") {
           const route = parseProgrammaticRoutePath(definition.path, "page");
@@ -1676,5 +1714,13 @@ async function safeGlobFiles(pattern: string, cwd: string): Promise<string[]> {
     return await globFiles(pattern, cwd);
   } catch {
     return [];
+  }
+}
+
+function toRealPath(filePath: string): string {
+  try {
+    return realpathSync(filePath);
+  } catch {
+    return filePath;
   }
 }

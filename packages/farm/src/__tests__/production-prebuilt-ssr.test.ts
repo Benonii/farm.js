@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
@@ -21,6 +21,8 @@ import { definePlugin } from "../plugin";
 import { logger } from "../utils";
 
 const isWindows = process.platform === "win32";
+// Bun is optional: the bun preset's shutdown runs only where it is installed.
+const hasBun = spawnSync("bun", ["--version"], { stdio: "ignore" }).status === 0;
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -764,19 +766,179 @@ export default function Page() {
     }
   }, 120_000);
 
-  it("adds a fresh CSP nonce to production HTML and every script tag", async () => {
+  it("lists a page's client modules as modulepreload links in the document head", async () => {
+    const root = await createProductionFixture();
+
+    try {
+      await fs.writeFile(
+        path.join(root, "src", "app", "layout.tsx"),
+        `
+export default function RootLayout({ children }) {
+  return <html><head><title>Preloads</title></head><body>{children}</body></html>;
+}
+`.trim(),
+      );
+      await fs.writeFile(
+        path.join(root, "src", "app", "counter.tsx"),
+        `
+"use client";
+import { useState } from "react";
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>count {count}</button>;
+}
+`.trim(),
+      );
+      await fs.writeFile(
+        path.join(root, "src", "app", "page.tsx"),
+        `
+import { Counter } from "./counter";
+
+export default function Page() {
+  return <main><Counter /></main>;
+}
+`.trim(),
+      );
+      await fs.mkdir(path.join(root, "src", "app", "islands"), { recursive: true });
+      await fs.writeFile(
+        path.join(root, "src", "app", "islands", "page.tsx"),
+        `
+import { Counter } from "../counter";
+
+export default async function IslandsPage() {
+  return <main><h1>islands</h1><Counter /></main>;
+}
+`.trim(),
+      );
+      const userConfig = {
+        root,
+        srcDir: "src",
+        images: { provider: "none" },
+        telemetry: false,
+        generateBuildId: () => "client-module-preloads-test",
+        // A vendor chunk the entry imports statically, as the shared chunks of a larger app are.
+        vite: {
+          plugins: [
+            {
+              name: "react-vendor-chunk",
+              applyToEnvironment: (environment: { name: string }) => environment.name === "client",
+              outputOptions: (options: Record<string, unknown>) => ({
+                ...options,
+                codeSplitting: {
+                  groups: [
+                    {
+                      name: "react-vendor",
+                      test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                    },
+                  ],
+                },
+              }),
+            },
+          ],
+        },
+      };
+      const config = await resolveConfig(userConfig, "production");
+      await build(config, { root, preset: "node-server" });
+
+      const publicDir = path.join(root, ".farm", ".output", "public");
+      const entry = (await fs.readdir(publicDir)).find((name) =>
+        /^farm-client-h[0-9a-f]+\.js$/.test(name),
+      );
+      expect(entry).toBeDefined();
+      const entryCode = await fs.readFile(path.join(publicDir, entry!), "utf8");
+      const manifest = JSON.parse(
+        await fs.readFile(path.join(root, ".farm", "client-module-preloads.json"), "utf8"),
+      ) as { files: string[]; entry: number[]; modules: Record<string, number[]> };
+      const entryImports = manifest.entry.map((index) => manifest.files[index]!);
+      const moduleChunk = (moduleId: string) => manifest.files[manifest.modules[moduleId]![0]!]!;
+      expect(entryImports.length).toBeGreaterThan(0);
+      // The entry imports the first one statically.
+      expect(entryCode).toMatch(
+        new RegExp(
+          `(?:import|from)\\s*["'\`]\\./${entryImports[0]!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["'\`]`,
+        ),
+      );
+
+      const preloadsIn = async (html: string) => {
+        const head = html.slice(0, html.indexOf("</head>"));
+        const files = [
+          ...head.matchAll(/<link rel="modulepreload" href="\/([^"]+)" fetchpriority="low">/g),
+        ].map(([, file]) => file!);
+        expect(new Set(files).size).toBe(files.length);
+        expect(files).not.toContain(entry);
+        await Promise.all(files.map((file) => fs.access(path.join(publicDir, file))));
+        // After the stylesheet, so the first paint's CSS is requested first.
+        expect(head.indexOf('rel="stylesheet"')).toBeLessThan(head.indexOf('rel="modulepreload"'));
+        return files;
+      };
+
+      const serverDir = path.join(root, ".farm", ".output", "server");
+      // A hydrating page: the entry's imports, then the page module the entry imports on start.
+      await runProductionRequest(serverDir, async (response) => {
+        expect(response.status).toBe(200);
+        const files = await preloadsIn(await response.text());
+        expect(files.slice(0, entryImports.length)).toEqual(entryImports);
+        expect(files).toContain(moduleChunk("/src/app/page.tsx"));
+      });
+      // An async page: the client component its island loads.
+      await runProductionRequest(
+        serverDir,
+        async (response) => {
+          expect(response.status).toBe(200);
+          const html = await response.text();
+          expect(html).toContain('data-farm-client-boundary="/src/app/counter.tsx"');
+          const files = await preloadsIn(html);
+          expect(files).toContain(moduleChunk("/src/app/counter.tsx"));
+          expect(files).not.toContain(moduleChunk("/src/app/page.tsx"));
+        },
+        "/islands",
+      );
+      await runProductionRequest(
+        serverDir,
+        async (response) => {
+          expect(response.status).toBe(404);
+          expect(await preloadsIn(await response.text())).toEqual(entryImports);
+        },
+        "/missing",
+      );
+
+      // A nonce policy blocks parser-inserted links without the nonce, so nonce mode lists none.
+      await build(
+        await resolveConfig(
+          { ...userConfig, security: { csp: { nonce: true, policy: "script-src 'self'" } } },
+          "production",
+        ),
+        { root, preset: "node-server" },
+      );
+      await runProductionRequest(serverDir, async (response) => {
+        expect(response.status).toBe(200);
+        const html = await response.text();
+        expect(html).toContain('data-farm-island="page"');
+        expect(html).not.toContain('rel="modulepreload" href="/chunks/');
+      });
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it("gives a fresh CSP nonce to Farm's scripts and opted-in app scripts only", async () => {
     const root = await createProductionFixture();
 
     try {
       await fs.writeFile(
         path.join(root, "src", "app", "page.tsx"),
         `
-export default function Page() {
+import { getCspNonce } from "@farm.js/core";
+export const dynamic = "force-dynamic";
+export default async function Page({ searchParams }) {
+  const { bio = "" } = await searchParams;
   return (
     <main data-csp-nonce-page>
       Nonce-protected production output
-      <script nonce="stale-build-nonce" dangerouslySetInnerHTML={{ __html: "window.city='İİİİİİİİ 🌱';" }} />
-      <script>window.appReady=true</script>
+      <script data-app="stale" nonce="stale-build-nonce" dangerouslySetInnerHTML={{ __html: "window.city='İİİİİİİİ 🌱';" }} />
+      <script data-app="opted-in" nonce={getCspNonce()} dangerouslySetInnerHTML={{ __html: "window.appReady=true" }} />
+      <div dangerouslySetInnerHTML={{ __html: bio }} />
     </main>
   );
 }
@@ -801,20 +963,40 @@ export default function Page() {
 
       await build(config, { root, preset: "node-server" });
 
+      const injected = encodeURIComponent(
+        '<script data-app="injected">window.pwned=1</script>' +
+          '<script data-app="guessed" nonce="guessed">window.pwned=2</script>',
+      );
       await runProductionRequest(
         path.join(root, ".farm", ".output", "server"),
         async (response) => {
           expect(response.status).toBe(200);
-          const firstPolicy = response.headers.get("content-security-policy") ?? "";
+          const firstResponse = await fetch(new URL(`/?bio=${injected}`, response.url));
+          const firstPolicy = firstResponse.headers.get("content-security-policy") ?? "";
           const firstNonce = firstPolicy.match(/'nonce-([^']+)'/)?.[1];
-          const firstHtml = await response.text();
+          const firstHtml = await firstResponse.text();
           const firstScripts = Array.from(firstHtml.matchAll(/<script\b[^>]*>/gi), ([tag]) => tag);
+          const appScripts = firstScripts.filter((tag) => tag.includes("data-app="));
+          // Data blocks never run, so they need no nonce.
+          const frameworkScripts = firstScripts.filter(
+            (tag) => !tag.includes("data-app=") && !tag.includes('type="application/json"'),
+          );
+          const appScript = (name: string) =>
+            appScripts.find((tag) => tag.includes(`data-app="${name}"`));
 
           expect(firstNonce).toBeTruthy();
           expect(firstPolicy).not.toContain("'unsafe-inline'");
           expect(firstHtml).toContain("window.city='İİİİİİİİ 🌱';");
-          expect(firstScripts.length).toBeGreaterThan(0);
-          expect(firstScripts.every((tag) => tag.includes(`nonce="${firstNonce}"`))).toBe(true);
+          expect(firstHtml).toContain("window.pwned=1");
+          // The inline bootstrap and the client entry.
+          expect(frameworkScripts.length).toBeGreaterThanOrEqual(2);
+          expect(frameworkScripts.every((tag) => tag.includes(`nonce="${firstNonce}"`))).toBe(true);
+          expect(frameworkScripts.some((tag) => /type="module"[^>]*src=/.test(tag))).toBe(true);
+          expect(appScript("opted-in")).toContain(`nonce="${firstNonce}"`);
+          for (const name of ["stale", "injected", "guessed"]) {
+            expect(appScript(name)).toBeDefined();
+            expect(appScript(name)).not.toMatch(/\bnonce\s*=/i);
+          }
 
           const secondResponse = await fetch(response.url);
           const secondPolicy = secondResponse.headers.get("content-security-policy") ?? "";
@@ -827,8 +1009,144 @@ export default function Page() {
 
           expect(secondNonce).toBeTruthy();
           expect(secondNonce).not.toBe(firstNonce);
-          expect(secondScripts.length).toBeGreaterThan(0);
-          expect(secondScripts.every((tag) => tag.includes(`nonce="${secondNonce}"`))).toBe(true);
+          expect(secondHtml).not.toContain(firstNonce!);
+          expect(secondScripts.find((tag) => tag.includes('data-app="opted-in"'))).toContain(
+            `nonce="${secondNonce}"`,
+          );
+          expect(
+            secondScripts
+              .filter(
+                (tag) => !tag.includes("data-app=") && !tag.includes('type="application/json"'),
+              )
+              .every((tag) => tag.includes(`nonce="${secondNonce}"`)),
+          ).toBe(true);
+        },
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it("runs Farm's scripts and blocks injected ones in the browser under a nonce CSP", async () => {
+    const executablePath = await resolveInstalledChromiumExecutable();
+    if (!executablePath) return;
+    const root = await createProductionFixture();
+    try {
+      await fs.mkdir(path.join(root, "src", "components"), { recursive: true });
+      await fs.writeFile(
+        path.join(root, "src", "components", "counter.tsx"),
+        `
+"use client";
+import { useState } from "react";
+export default function Counter() {
+  const [count, setCount] = useState(0);
+  return <button data-counter onClick={() => setCount((value) => value + 1)}>count:{count}</button>;
+}`,
+      );
+      await fs.writeFile(
+        path.join(root, "src", "app", "content.tsx"),
+        `export default function Content() { return <p id="nonce-reveal">revealed</p>; }`,
+      );
+      // A revalidated page: shared caches may keep it, so every response must
+      // still carry its own nonce on Farm's scripts.
+      await fs.mkdir(path.join(root, "src", "app", "isr"), { recursive: true });
+      await fs.writeFile(
+        path.join(root, "src", "app", "isr", "page.tsx"),
+        `
+import Counter from "../../components/counter";
+export const revalidate = 60;
+export default function Page() {
+  return (
+    <main>
+      <div dangerouslySetInnerHTML={{ __html: '<script>window.pwned="isr"</script>' }} />
+      <Counter />
+    </main>
+  );
+}`,
+      );
+      await fs.writeFile(
+        path.join(root, "src", "app", "page.tsx"),
+        `
+import React, { lazy, Suspense } from "react";
+import { getCspNonce } from "@farm.js/core";
+import Counter from "../components/counter";
+export const dynamic = "force-dynamic";
+const Content = lazy(() => import("./content"));
+export default async function Page({ searchParams }) {
+  const { bio = "" } = await searchParams;
+  return (
+    <main>
+      <script nonce={getCspNonce()} dangerouslySetInnerHTML={{ __html: "window.appReady=true" }} />
+      <div dangerouslySetInnerHTML={{ __html: bio }} />
+      <Counter />
+      <Suspense fallback={<p id="nonce-loading">loading</p>}><Content /></Suspense>
+    </main>
+  );
+}`,
+      );
+      const config = await resolveConfig(
+        {
+          root,
+          srcDir: "src",
+          images: { provider: "none" },
+          telemetry: false,
+          generateBuildId: () => "production-csp-nonce-browser-test",
+          security: { csp: { nonce: true, policy: "default-src 'self'; script-src 'self'" } },
+        },
+        "production",
+      );
+      await build(config, { root, preset: "node-server" });
+      await runProductionRequest(
+        path.join(root, ".farm", ".output", "server"),
+        async (response) => {
+          expect(response.status).toBe(200);
+          const browser = await chromium.launch({ headless: true, executablePath });
+          try {
+            const page = await browser.newPage();
+            const violations: string[] = [];
+            page.on("console", (message) => {
+              if (/Content Security Policy/.test(message.text())) violations.push(message.text());
+            });
+            const bio = encodeURIComponent(
+              '<script>window.pwned="script"</script>' +
+                '<script nonce="guess">window.pwned="guessed"</script>',
+            );
+            await page.goto(new URL(`/?bio=${bio}`, response.url).toString());
+            await page.locator("#nonce-reveal").waitFor({ state: "visible" });
+            await page.locator("[data-counter]").click();
+            await expect.poll(() => page.locator("[data-counter]").textContent()).toBe("count:1");
+            expect(await page.evaluate(() => (window as any).appReady)).toBe(true);
+            expect(await page.evaluate(() => (window as any).pwned)).toBeUndefined();
+            expect(violations.length).toBeGreaterThanOrEqual(2);
+
+            const isrNonces: string[] = [];
+            for (let visit = 0; visit < 2; visit++) {
+              const isr = await page.goto(new URL("/isr", response.url).toString());
+              const policy = isr!.headers()["content-security-policy"] ?? "";
+              const nonce = policy.match(/'nonce-([^']+)'/)?.[1];
+              const isrHtml = await isr!.text();
+              // Farm's executable scripts; the injected one is checked below.
+              const tags = Array.from(
+                isrHtml.matchAll(/<script\b[^>]*>(?!window\.pwned)/gi),
+                ([tag]) => tag,
+              );
+              expect(nonce).toBeTruthy();
+              expect(isr!.headers()["cache-control"]).toContain("s-maxage=60");
+              isrNonces.push(nonce!);
+              for (const tag of tags) {
+                if (tag.includes("application/json")) continue;
+                expect(tag).toContain(`nonce="${nonce}"`);
+              }
+              expect(tags.length).toBeGreaterThanOrEqual(2);
+              expect(isrHtml).toContain('<script>window.pwned="isr"</script>');
+              await page.locator("[data-counter]").click();
+              await expect.poll(() => page.locator("[data-counter]").textContent()).toBe("count:1");
+              expect(await page.evaluate(() => (window as any).pwned)).toBeUndefined();
+            }
+            expect(isrNonces[1]).not.toBe(isrNonces[0]);
+          } finally {
+            await browser.close();
+          }
         },
       );
     } finally {
@@ -924,17 +1242,19 @@ export default function Page() {
     120_000,
   );
 
-  it("hashes Unicode inline scripts exactly in prerendered production HTML", async () => {
+  it("hashes only Farm's and opted-in inline scripts in prerendered production HTML", async () => {
     const root = await createProductionFixture();
     try {
       await fs.writeFile(
         path.join(root, "src", "app", "page.tsx"),
         `
+import { getCspNonce } from "@farm.js/core";
 export const ssg = true;
 export default function Page() {
   return <main>İstanbul
-    <script nonce="old" dangerouslySetInnerHTML={{ __html: "window.city='İİİİİİİİ 🌱';" }} />
-    <script>window.appReady=true</script>
+    <script data-app="opted-in" nonce={getCspNonce()} dangerouslySetInnerHTML={{ __html: "window.city='İİİİİİİİ 🌱';" }} />
+    <script data-app="stale" nonce="old" dangerouslySetInnerHTML={{ __html: "window.stale=true" }} />
+    <script data-app="cms" dangerouslySetInnerHTML={{ __html: "window.cms=true" }} />
   </main>;
 }`,
       );
@@ -959,15 +1279,18 @@ export default function Page() {
           expect(html).toContain("window.city='İİİİİİİİ 🌱';");
           expect(html).not.toMatch(/<script\b[^>]*\bnonce\s*=/i);
           expect(policy).not.toContain("'nonce-");
-          const contents = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
-            .filter(([, attributes]) => !/(?:^|\s)src\s*=/i.test(attributes!))
-            .map(([, , content]) => content!);
-          expect(contents.length).toBeGreaterThanOrEqual(2);
-          for (const content of contents) {
-            expect(policy).toContain(
-              `'sha256-${createHash("sha256").update(content).digest("base64")}'`,
-            );
-          }
+          const hashOf = (content: string) =>
+            `'sha256-${createHash("sha256").update(content).digest("base64")}'`;
+          const inline = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(
+            ([, attributes]) =>
+              !/(?:^|\s)src\s*=/i.test(attributes!) && !attributes!.includes("application/json"),
+          );
+          const framework = inline.filter(([, attributes]) => !attributes!.includes("data-app="));
+          expect(framework.length).toBeGreaterThanOrEqual(1);
+          for (const [, , content] of framework) expect(policy).toContain(hashOf(content!));
+          expect(policy).toContain(hashOf("window.city='İİİİİİİİ 🌱';"));
+          expect(policy).not.toContain(hashOf("window.stale=true"));
+          expect(policy).not.toContain(hashOf("window.cms=true"));
         },
       );
     } finally {
@@ -4340,24 +4663,30 @@ export default function DynamicPage({ params }) {
 
   // Windows has no POSIX signals: child.kill("SIGTERM") maps to TerminateProcess,
   // so graceful shutdown never runs and its effects cannot be observed.
-  it("drains in-flight requests and closes production resources on SIGTERM", async (ctx) => {
-    if (isWindows) ctx.skip();
-    const root = await createProductionFixture();
-    const markerPath = path.join(root, "production-lifecycle.log");
-    const apiDir = path.join(root, "src", "app", "api", "slow");
-    const serverConfig = {
-      gracefulShutdownTimeout: "3s" as const,
-      health: {
-        livenessPath: "/health/live",
-        readinessPath: "/health/ready",
-      },
-    };
+  it.each([
+    { preset: "node-server", command: process.execPath },
+    { preset: "bun", command: "bun" },
+  ])(
+    "drains in-flight requests and closes production resources on SIGTERM ($preset)",
+    async ({ preset, command }, ctx) => {
+      if (isWindows) ctx.skip();
+      if (preset === "bun" && !hasBun) ctx.skip();
+      const root = await createProductionFixture();
+      const markerPath = path.join(root, "production-lifecycle.log");
+      const apiDir = path.join(root, "src", "app", "api", "slow");
+      const serverConfig = {
+        gracefulShutdownTimeout: "3s" as const,
+        health: {
+          livenessPath: "/health/live",
+          readinessPath: "/health/ready",
+        },
+      };
 
-    try {
-      await fs.mkdir(apiDir, { recursive: true });
-      await fs.writeFile(
-        path.join(apiDir, "route.ts"),
-        `
+      try {
+        await fs.mkdir(apiDir, { recursive: true });
+        await fs.writeFile(
+          path.join(apiDir, "route.ts"),
+          `
 import { appendFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -4368,10 +4697,10 @@ export async function GET() {
   return new Response("drained response");
 }
 `.trim(),
-      );
-      await fs.writeFile(
-        path.join(root, "farm.config.ts"),
-        `
+        );
+        await fs.writeFile(
+          path.join(root, "farm.config.ts"),
+          `
 import { appendFile } from "node:fs/promises";
 import { defineConfig, definePlugin } from "@farm.js/core";
 
@@ -4398,92 +4727,125 @@ export default defineConfig({
   plugins: [lifecyclePlugin],
 });
 `.trim(),
-      );
-
-      const config = await resolveConfig(
-        {
-          root,
-          srcDir: "src",
-          images: { provider: "none" },
-          server: serverConfig,
-          plugins: [
-            definePlugin({
-              name: "test:production-lifecycle-build-marker",
-              runtime: {
-                start() {},
-                close() {},
-              },
-            }),
-          ],
-        },
-        "production",
-      );
-      await build(config, { root, preset: "node-server" });
-
-      const serverDir = path.join(root, ".farm", ".output", "server");
-      const port = await getAvailablePort();
-      const output: string[] = [];
-      const productionServer = spawn(process.execPath, [path.join(serverDir, "index.mjs")], {
-        cwd: serverDir,
-        env: {
-          ...process.env,
-          HOST: "127.0.0.1",
-          PORT: String(port),
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      productionServer.stdout.on("data", (chunk) => output.push(String(chunk)));
-      productionServer.stderr.on("data", (chunk) => output.push(String(chunk)));
-
-      try {
-        const healthResponse = await waitForServer(
-          `http://127.0.0.1:${port}/health/ready`,
-          () => output.join(""),
-          () => productionServer.exitCode !== null,
         );
-        expect(healthResponse.status).toBe(200);
-        await expect(healthResponse.json()).resolves.toMatchObject({ status: "ok" });
 
-        const request = fetch(`http://127.0.0.1:${port}/api/slow`);
-        for (let attempt = 0; attempt < 100; attempt++) {
-          const marker = await fs.readFile(markerPath, "utf8").catch(() => "");
-          if (marker.includes("request:start")) break;
-          await new Promise((resolve) => setTimeout(resolve, 20));
-        }
-        expect(await fs.readFile(markerPath, "utf8")).toContain("request:start");
-
-        productionServer.kill("SIGTERM");
-        const response = await request;
-        expect(response.status).toBe(200);
-        await expect(response.text()).resolves.toBe("drained response");
-
-        const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
-          (resolve, reject) => {
-            const timeout = setTimeout(() => {
-              productionServer.kill("SIGKILL");
-              reject(new Error(`Production server did not shut down:\n${output.join("")}`));
-            }, 5_000);
-            productionServer.once("exit", (code, signal) => {
-              clearTimeout(timeout);
-              resolve({ code, signal });
-            });
+        const config = await resolveConfig(
+          {
+            root,
+            srcDir: "src",
+            images: { provider: "none" },
+            server: serverConfig,
+            plugins: [
+              definePlugin({
+                name: "test:production-lifecycle-build-marker",
+                runtime: {
+                  start() {},
+                  close() {},
+                },
+              }),
+            ],
           },
+          "production",
         );
-        expect(exit).toEqual({ code: 0, signal: null });
-        expect((await fs.readFile(markerPath, "utf8")).trim().split("\n")).toEqual([
-          "runtime:ready",
-          "request:start",
-          "request:finish",
-          "runtime:closed:production-server-closed",
-          "resource:closed",
-        ]);
+        await build(config, { root, preset });
+
+        const serverDir = path.join(root, ".farm", ".output", "server");
+        const port = await getAvailablePort();
+        const output: string[] = [];
+        const productionServer = spawn(command, [path.join(serverDir, "index.mjs")], {
+          cwd: serverDir,
+          env: {
+            ...process.env,
+            HOST: "127.0.0.1",
+            PORT: String(port),
+          },
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+        productionServer.stdout.on("data", (chunk) => output.push(String(chunk)));
+        productionServer.stderr.on("data", (chunk) => output.push(String(chunk)));
+
+        try {
+          const healthResponse = await waitForServer(
+            `http://127.0.0.1:${port}/health/ready`,
+            () => output.join(""),
+            () => productionServer.exitCode !== null,
+          );
+          expect(healthResponse.status).toBe(200);
+          await expect(healthResponse.json()).resolves.toMatchObject({ status: "ok" });
+
+          const request = fetch(`http://127.0.0.1:${port}/api/slow`);
+          for (let attempt = 0; attempt < 100; attempt++) {
+            const marker = await fs.readFile(markerPath, "utf8").catch(() => "");
+            if (marker.includes("request:start")) break;
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+          expect(await fs.readFile(markerPath, "utf8")).toContain("request:start");
+
+          productionServer.kill("SIGTERM");
+          const response = await request;
+          expect(response.status).toBe(200);
+          await expect(response.text()).resolves.toBe("drained response");
+
+          const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
+            (resolve, reject) => {
+              const timeout = setTimeout(() => {
+                productionServer.kill("SIGKILL");
+                reject(new Error(`Production server did not shut down:\n${output.join("")}`));
+              }, 5_000);
+              productionServer.once("exit", (code, signal) => {
+                clearTimeout(timeout);
+                resolve({ code, signal });
+              });
+            },
+          );
+          expect(exit).toEqual({ code: 0, signal: null });
+          expect((await fs.readFile(markerPath, "utf8")).trim().split("\n")).toEqual([
+            "runtime:ready",
+            "request:start",
+            "request:finish",
+            "runtime:closed:production-server-closed",
+            "resource:closed",
+          ]);
+        } finally {
+          if (productionServer.exitCode === null) productionServer.kill("SIGKILL");
+        }
+
+        // An idle server exits right away, still running the shutdown hooks.
+        await fs.rm(markerPath);
+        const idleServer = spawn(command, [path.join(serverDir, "index.mjs")], {
+          cwd: serverDir,
+          env: { ...process.env, HOST: "127.0.0.1", PORT: String(port) },
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+        const idleOutput: string[] = [];
+        idleServer.stdout.on("data", (chunk) => idleOutput.push(String(chunk)));
+        idleServer.stderr.on("data", (chunk) => idleOutput.push(String(chunk)));
+        try {
+          const ready = await waitForServer(
+            `http://127.0.0.1:${port}/health/ready`,
+            () => idleOutput.join(""),
+            () => idleServer.exitCode !== null,
+          );
+          await ready.arrayBuffer();
+          const exited = new Promise<number | null>((resolve) => idleServer.once("exit", resolve));
+          const signalledAt = performance.now();
+          idleServer.kill("SIGTERM");
+          expect(await exited).toBe(0);
+          expect(performance.now() - signalledAt).toBeLessThan(500);
+          expect((await fs.readFile(markerPath, "utf8")).trim().split("\n")).toEqual([
+            "runtime:ready",
+            "runtime:closed:production-server-closed",
+            "resource:closed",
+          ]);
+        } finally {
+          if (idleServer.exitCode === null) idleServer.kill("SIGKILL");
+        }
       } finally {
-        if (productionServer.exitCode === null) productionServer.kill("SIGKILL");
+        await fs.rm(root, { recursive: true, force: true });
       }
-    } finally {
-      await fs.rm(root, { recursive: true, force: true });
-    }
-  }, 120_000);
+    },
+    120_000,
+  );
 
   // Windows has no POSIX signals: child.kill("SIGTERM") maps to TerminateProcess,
   // so graceful shutdown never runs and its effects cannot be observed.
@@ -5871,6 +6233,20 @@ export default function OpenGraphImage() {
       );
 
       await build(config, { root, preset: "node-server" });
+      await expect(
+        fs.stat(
+          path.join(
+            root,
+            ".farm",
+            ".output",
+            "server",
+            "node_modules",
+            "@vercel",
+            "og",
+            "package.json",
+          ),
+        ),
+      ).resolves.toBeTruthy();
 
       await runProductionRequest(
         path.join(root, ".farm", ".output", "server"),
@@ -5891,6 +6267,140 @@ export default function OpenGraphImage() {
       await fs.rm(root, { recursive: true, force: true });
     }
   }, 180_000);
+
+  it.each(["node-server", "bun"])(
+    "leaves @vercel/og out of %s output when the app renders no metadata image",
+    async (preset) => {
+      const root = await createProductionFixture();
+
+      try {
+        const config = await resolveConfig(
+          {
+            root,
+            srcDir: "src",
+            images: { provider: "none" },
+            // A runtime plugin pulls in core's shared server runtime, which
+            // holds the lazy @vercel/og import for JSX metadata images.
+            plugins: [definePlugin({ name: "test:runtime-before", runtime: { before() {} } })],
+            generateBuildId: () => `no-metadata-image-${preset}-test`,
+          },
+          "production",
+        );
+
+        await build(config, { root, preset });
+
+        const serverDir = path.join(root, ".farm", ".output", "server");
+        await expect(
+          fs.stat(path.join(serverDir, "node_modules", "@vercel", "og")),
+        ).rejects.toThrow(/ENOENT/);
+        const serverFiles = await fs.readdir(serverDir, { recursive: true });
+        for (const file of serverFiles) {
+          if (!/\.m?js$/.test(file)) continue;
+          expect(await fs.readFile(path.join(serverDir, file), "utf8"), file).not.toMatch(
+            /["']@vercel\/og["']/,
+          );
+        }
+        if (preset === "node-server") {
+          await runProductionRequest(serverDir, async (response) => {
+            expect(response.status).toBe(200);
+            expect(await response.text()).toContain("prebuilt SSR output");
+          });
+        }
+      } finally {
+        await fs.rm(root, { recursive: true, force: true });
+      }
+    },
+    180_000,
+  );
+
+  it.each([{ docs: false }, { docs: true }])(
+    "keeps the dev pipeline out of a runtime plugin app's server output (%j)",
+    async ({ docs }) => {
+      const root = await createProductionFixture();
+
+      try {
+        // The app's own config imports the plugin API, as a real app does. The
+        // server bundles it, so whatever shares a chunk with definePlugin and
+        // PluginManager ships too.
+        await fs.writeFile(
+          path.join(root, "farm.config.ts"),
+          `import { definePlugin } from "@farm.js/core/plugin";
+
+export default {
+  plugins: [
+    definePlugin({
+      name: "test:stamp",
+      runtime: {
+        after({ response }) {
+          const headers = new Headers(response.headers);
+          headers.set("x-test-plugin", "ran");
+          return new Response(response.body, { status: response.status, headers });
+        },
+      },
+    }),
+  ],
+};
+`,
+        );
+        if (docs) {
+          await fs.mkdir(path.join(root, "src", "app", "docs"), { recursive: true });
+          await fs.writeFile(
+            path.join(root, "src", "app", "docs", "page.mdx"),
+            `# Plugin app docs\n\nServer-rendered documentation content.`,
+          );
+        }
+        const userConfig = await loadConfig(root, undefined, "production");
+        const config = await resolveConfig(
+          {
+            ...userConfig,
+            root,
+            srcDir: "src",
+            images: { provider: "none" },
+            ...(docs ? { docs: { entry: "/docs", search: false } } : {}),
+            generateBuildId: () => `plugin-server-output-${docs}-test`,
+          },
+          "production",
+        );
+
+        await build(config, { root, preset: "node-server" });
+
+        const serverDir = path.join(root, ".farm", ".output", "server");
+        let serverCode = "";
+        for (const file of await fs.readdir(serverDir, { recursive: true })) {
+          if (/\.m?js$/.test(file))
+            serverCode += await fs.readFile(path.join(serverDir, file), "utf8");
+        }
+        // The Vite plugin and dev pipeline never run in a built server.
+        expect(serverCode).not.toContain("farm:server-only-entries");
+        expect(serverCode).not.toContain("@tailwindcss/vite");
+        // The MDX compiler ships only with the docs runtime that uses it.
+        if (docs) expect(serverCode).toContain("mdxjsEsm");
+        else expect(serverCode).not.toContain("mdxjsEsm");
+
+        await runProductionRequest(serverDir, async (response) => {
+          expect(response.status).toBe(200);
+          expect(response.headers.get("x-test-plugin")).toBe("ran");
+          expect(await response.text()).toContain("prebuilt SSR output");
+
+          // Markdown mirrors are on by default and still work.
+          const markdown = await fetch(new URL("/index.md", response.url));
+          expect(markdown.status).toBe(200);
+          expect(markdown.headers.get("content-type")).toContain("text/markdown");
+          expect(await markdown.text()).toContain("prebuilt SSR output");
+
+          if (docs) {
+            const page = await fetch(new URL("/docs", response.url));
+            expect(page.status).toBe(200);
+            expect(page.headers.get("x-test-plugin")).toBe("ran");
+            expect(await page.text()).toContain("Plugin app docs");
+          }
+        });
+      } finally {
+        await fs.rm(root, { recursive: true, force: true });
+      }
+    },
+    180_000,
+  );
 
   it("serves a @vercel/og ImageResponse from an API route on a built node-server", async () => {
     const root = await createProductionFixture();
