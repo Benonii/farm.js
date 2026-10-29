@@ -13,9 +13,14 @@ import {
   copyFileSync,
   existsSync,
   readdirSync,
+  rmSync,
   statSync,
 } from "fs";
-import type { NitroConfig } from "nitro/types";
+import type { Nitro, NitroConfig } from "nitro/types";
+import {
+  FARM_NODE_ENV_MODULE_FILE,
+  FARM_NODE_ENV_MODULE_SOURCE,
+} from "@farm.js/core/internal/production-node-env";
 import { resolveRscBuildOutputPath } from "./build-paths.js";
 
 const MANIFEST_FILENAME = "__vite_rsc_assets_manifest.js";
@@ -73,15 +78,22 @@ export function rewriteRscEntryImports(serverDir: string, serverDistDir: string)
       const relative = path.relative(path.dirname(entryChunkPath), target).replace(/\\/g, "/");
       return relative.startsWith(".") ? relative : `./${relative}`;
     };
-    // Match any path that ends with dist/rsc/index.js or dist/ssr/index.js (minified, no spaces)
-    code = code.replace(
-      /(["'`])[^"'`]*?dist\/rsc\/index\.js\1/g,
-      JSON.stringify(relativeImport(path.join(serverDistDir, "rsc", "index.js"))),
-    );
-    code = code.replace(
-      /(["'`])[^"'`]*?dist\/ssr\/index\.js\1/g,
-      JSON.stringify(relativeImport(path.join(serverDistDir, "ssr", "index.js"))),
-    );
+    // Match any path that ends with dist/rsc/index.js, dist/ssr/index.js or the NODE_ENV module
+    // (minified, no spaces)
+    for (const [environment, file] of [
+      ["rsc", "index.js"],
+      ["rsc", FARM_NODE_ENV_MODULE_FILE],
+      ["ssr", "index.js"],
+    ] as const) {
+      const pattern = new RegExp(
+        `(["'\`])[^"'\`]*?dist/${environment}/${file.replace(/\./g, "\\.")}\\1`,
+        "g",
+      );
+      code = code.replace(
+        pattern,
+        JSON.stringify(relativeImport(path.join(serverDistDir, environment, file))),
+      );
+    }
     writeFileSync(entryChunkPath, code, "utf-8");
   }
 }
@@ -247,7 +259,13 @@ function writeRscEntryFile(buildDir: string, rendererPath: string, ssrPath?: str
   const setSsLoader = relSsr
     ? `globalThis.__VITE_RSC_LOAD_SSR__ = () => import("./${relSsr}");`
     : "";
+  // Imported first and kept external like the bundles, so it runs before React picks its
+  // development or production build from NODE_ENV. Inlined, it would run after them.
+  const relNodeEnv = path
+    .relative(buildDir, path.join(path.dirname(resolvedRenderer), FARM_NODE_ENV_MODULE_FILE))
+    .replace(/\\/g, "/");
   const code = `
+import "./${relNodeEnv}";
 ${setSsLoader}
 import * as entryExports from "./${relRenderer}";
 import { defineEventHandler } from "h3";
@@ -333,6 +351,211 @@ export type BuildRscNitroOptions = {
   preset?: string;
 };
 
+function listModuleFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  const files: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...listModuleFiles(full));
+    else if (/\.(?:m|c)?js$/.test(entry.name)) files.push(full);
+  }
+  return files;
+}
+
+/**
+ * Copy the packages the RSC and SSR bundles load into the server output. Nitro traces only its own
+ * bundle, and these are copied in afterwards; their code-split chunks and dynamic imports (such as
+ * shiki's WebAssembly engine) reach package files the entry files alone do not. The RSC bundle
+ * resolves packages with the react-server condition, the SSR bundle without it.
+ */
+async function traceRscBundleDependencies(
+  root: string,
+  serverDir: string,
+  rscDir: string,
+  ssrDir: string | null,
+): Promise<void> {
+  const { traceNodeModules } = await import("nf3");
+  const traces: Array<[string[], string[]]> = [
+    [listModuleFiles(rscDir), ["react-server", "node", "import", "default"]],
+    [ssrDir ? listModuleFiles(ssrDir) : [], ["node", "import", "default"]],
+  ];
+  for (const [files, conditions] of traces) {
+    if (files.length === 0) continue;
+    await traceNodeModules(files, { rootDir: root, outDir: serverDir, conditions });
+  }
+}
+
+/**
+ * Give the SSR bundle the production client CSS href and bootstrap script, so its HTML has styles
+ * and hydrates. Runs on the Vite output before Nitro, so the prerender pass and the copies in the
+ * server output render the same document. Only placeholders are replaced, so it is idempotent.
+ */
+function patchRscServerBundles(
+  rscDir: string,
+  ssrDir: string,
+  publicDir: string,
+  assetsDir: string | undefined,
+): void {
+  // Patch SSR bundle: inject production client CSS href and bootstrap script so HTML has styles and hydration works
+  const ssrIndexPath = path.join(ssrDir, "index.js");
+  const manifestPath = path.join(rscDir, MANIFEST_FILENAME);
+  let bootstrapScriptContent = "";
+  let clientEntryHref = "";
+  const RSC_CALL_SERVER_PLACEHOLDER =
+    "(function(){if(typeof globalThis.__viteRscCallServer!=='function'){globalThis.__viteRscCallServer=function(){return Promise.reject(new Error(\"Farm.js: server actions not ready\"));}}})();\n";
+  if (existsSync(manifestPath)) {
+    try {
+      const manifestContent = readFileSync(manifestPath, "utf-8");
+      const start = manifestContent.indexOf("{");
+      const end = manifestContent.lastIndexOf("}") + 1;
+      if (start >= 0 && end > start) {
+        const manifest = JSON.parse(manifestContent.slice(start, end)) as {
+          bootstrapScriptContent?: string;
+        };
+        bootstrapScriptContent = manifest.bootstrapScriptContent || "";
+        const importMatch = bootstrapScriptContent.match(
+          /^import\s*\(\s*["']([^"']+)["']\s*\)\s*$/,
+        );
+        if (importMatch) clientEntryHref = importMatch[1];
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const fullBootstrap = bootstrapScriptContent
+    ? RSC_CALL_SERVER_PLACEHOLDER + bootstrapScriptContent
+    : "";
+  // Patch manifest so production SSR gets bootstrap with __viteRscCallServer placeholder (SSR reads assetsManifest.bootstrapScriptContent)
+  if (fullBootstrap && existsSync(manifestPath)) {
+    try {
+      let manifestCode = readFileSync(manifestPath, "utf-8");
+      const escaped = JSON.stringify(bootstrapScriptContent);
+      const escapedFull = JSON.stringify(fullBootstrap);
+      if (manifestCode.includes(escaped) && escaped !== escapedFull) {
+        manifestCode = manifestCode.replace(escaped, escapedFull);
+        writeFileSync(manifestPath, manifestCode, "utf-8");
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (existsSync(ssrIndexPath)) {
+    const assetsDirName = assetsDir ?? "assets";
+    const assetsRoot = path.join(publicDir, assetsDirName);
+    let clientCssHref = "";
+    if (existsSync(assetsRoot)) {
+      const files = readdirSync(assetsRoot);
+      const cssFile = files.find((f) => f.endsWith(".css"));
+      if (cssFile) clientCssHref = `/${assetsDirName}/${cssFile}`;
+    }
+    try {
+      let ssrCode = readFileSync(ssrIndexPath, "utf-8");
+      // Only the assignment: the bundle also compares against the placeholder, and a second
+      // run over an already patched bundle must leave that comparison intact.
+      ssrCode = ssrCode.replace(
+        /(CLIENT_CSS_HREF\s*=\s*)"__FARM_CLIENT_CSS_HREF__"/,
+        "$1" + JSON.stringify(clientCssHref),
+      );
+      if (clientEntryHref && ssrCode.includes("__FARM_CLIENT_ENTRY_HREF__")) {
+        ssrCode = ssrCode.replace(
+          /(CLIENT_ENTRY_HREF\s*=\s*)"__FARM_CLIENT_ENTRY_HREF__"/,
+          "$1" + JSON.stringify(clientEntryHref),
+        );
+      }
+      if (fullBootstrap && ssrCode.includes("__FARM_BOOTSTRAP_SCRIPT__")) {
+        ssrCode = ssrCode.replace(
+          /=\s*["']__FARM_BOOTSTRAP_SCRIPT__["']/,
+          "= " + JSON.stringify(fullBootstrap),
+        );
+      }
+      writeFileSync(ssrIndexPath, ssrCode, "utf-8");
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/** The route the RSC entry answers, during the prerender pass only, with its static pages. */
+const FARM_PRERENDER_ROUTES_PATH = "/__farm/rsc-prerender-routes";
+
+/**
+ * Prerender the app's static pages and their RSC payloads into the public output with Nitro's
+ * prerenderer, which serves them before the server on every preset. The RSC entry lists the pages
+ * (it has the route modules and their generateStaticParams), through Nitro's x-nitro-prerender
+ * header on a seed route that is removed afterwards.
+ */
+async function prerenderRscPages(
+  nitro: Nitro,
+  prerender: (nitro: Nitro) => Promise<void>,
+  viteDistDir: string,
+): Promise<void> {
+  nitro.options.prerender = {
+    ...nitro.options.prerender,
+    routes: [FARM_PRERENDER_ROUTES_PATH],
+    crawlLinks: false,
+    // Failures are judged below: a seed that cannot run only skips prerendering.
+    failOnError: false,
+  };
+  // The prerender server is a separate Nitro build of the same renderer entry. Point its imports of
+  // the prebuilt bundles at the Vite output, as the server output's are pointed at their copies.
+  nitro.hooks.hook("prerender:init", (prerenderer) => {
+    prerenderer.hooks.hook("compiled", () => {
+      rewriteRscEntryImports(prerenderer.options.output.serverDir, viteDistDir);
+    });
+  });
+  let seedError: { message?: string } | undefined;
+  const failedPages: string[] = [];
+  nitro.hooks.hook("prerender:route", (route) => {
+    if (route.route !== FARM_PRERENDER_ROUTES_PATH) {
+      if (route.error) failedPages.push(`${route.route} (${route.error.message})`);
+      return;
+    }
+    seedError = route.error;
+    removeSeedOutput(nitro, route.fileName);
+  });
+  const previous = process.env.FARM_RSC_PRERENDER;
+  process.env.FARM_RSC_PRERENDER = "1";
+  try {
+    await prerender(nitro);
+  } finally {
+    if (previous === undefined) delete process.env.FARM_RSC_PRERENDER;
+    else process.env.FARM_RSC_PRERENDER = previous;
+  }
+  if (seedError) {
+    // The server could not start in place (for example, a runtime package only the server output
+    // carries). Every page still renders on request, so the build goes on without static files.
+    console.warn(
+      `[FARM] Prerendering skipped: the server could not list its static pages (${seedError.message}). Pages render on each request.`,
+    );
+    return;
+  }
+  if (failedPages.length > 0) {
+    // A page that asks to be static and fails to render fails the build, as in Next.js.
+    throw new Error(`[FARM] Prerendering failed for:\n  ${failedPages.join("\n  ")}`);
+  }
+}
+
+/** Remove the seed route's file, and the directories it created, from the public output. */
+function removeSeedOutput(nitro: Nitro, fileName: string | undefined): void {
+  const publicDir = path.resolve(nitro.options.output.publicDir);
+  const prerendered = (nitro as Nitro & { _prerenderedRoutes?: { route: string }[] })
+    ._prerenderedRoutes;
+  const index = prerendered?.findIndex((entry) => entry.route === FARM_PRERENDER_ROUTES_PATH) ?? -1;
+  if (index >= 0) prerendered!.splice(index, 1);
+  if (!fileName) return;
+  let target = path.join(publicDir, fileName);
+  rmSync(target, { force: true });
+  for (
+    target = path.dirname(target);
+    target.startsWith(publicDir + path.sep) &&
+    existsSync(target) &&
+    readdirSync(target).length === 0;
+    target = path.dirname(target)
+  ) {
+    rmSync(target, { recursive: true });
+  }
+}
+
 export async function buildRscNitro(options: BuildRscNitroOptions): Promise<void> {
   const {
     rendererPath,
@@ -344,7 +567,8 @@ export async function buildRscNitro(options: BuildRscNitroOptions): Promise<void
     preset = "vercel",
   } = options;
 
-  const { build, copyPublicAssets, createNitro, prepare } = await import("nitro/builder");
+  const { build, copyPublicAssets, createNitro, prepare, prerender } =
+    await import("nitro/builder");
 
   console.log(`[FARM] Building RSC server with Nitro (preset: ${preset})...`);
 
@@ -352,6 +576,14 @@ export async function buildRscNitro(options: BuildRscNitroOptions): Promise<void
   const serverDir = path.join(outputDir, "server");
   const publicOutDir = path.join(outputDir, "public");
 
+  // The server sets NODE_ENV to "production" unless the deployment chose one, as the core
+  // node-server output does. The RSC and SSR bundles read it at runtime: left unset, React loads
+  // its development builds and Flight responses carry server component props, stacks and paths.
+  writeFileSync(
+    path.join(path.dirname(path.resolve(rendererPath)), FARM_NODE_ENV_MODULE_FILE),
+    FARM_NODE_ENV_MODULE_SOURCE,
+    "utf-8",
+  );
   const entryPath = writeRscEntryFile(buildDir, rendererPath, ssrPath);
   const registeredRuntimePackages = new Map(runtimePackagesByRoot.get(path.resolve(root)) ?? []);
   for (const [packageName, packageRoot] of detectBundledRscRuntimes(rendererPath)) {
@@ -411,9 +643,19 @@ export async function buildRscNitro(options: BuildRscNitroOptions): Promise<void
     minify: true,
   };
 
+  if (ssrPath) {
+    patchRscServerBundles(
+      path.dirname(path.resolve(rendererPath)),
+      path.dirname(path.resolve(ssrPath)),
+      publicDir,
+      assetsDir,
+    );
+  }
+
   const nitro = await createNitro(config);
   await prepare(nitro);
   await copyPublicAssets(nitro);
+  await prerenderRscPages(nitro, prerender, path.dirname(path.dirname(path.resolve(rendererPath))));
   await build(nitro);
   await nitro.close();
   copyRuntimePackages(serverDir, registeredRuntimePackages);
@@ -425,6 +667,7 @@ export async function buildRscNitro(options: BuildRscNitroOptions): Promise<void
   mkdirSync(serverDistDir, { recursive: true });
   copyDir(rscSrc, path.join(serverDistDir, "rsc"));
   if (ssrSrc) copyDir(ssrSrc, path.join(serverDistDir, "ssr"));
+  await traceRscBundleDependencies(root, serverDir, rscSrc, ssrSrc);
   // Stub manifest if missing (RSC plugin may write it after our hook runs)
   const rscDestDir = path.join(serverDistDir, "rsc");
   const manifestDest = path.join(rscDestDir, "__vite_rsc_assets_manifest.js");
@@ -440,81 +683,6 @@ export async function buildRscNitro(options: BuildRscNitroOptions): Promise<void
   // Nitro may group the entry differently by builder. Make copied-dist imports
   // relative to the emitted chunk so output survives moving away from the project.
   rewriteRscEntryImports(serverDir, serverDistDir);
-
-  // Patch SSR bundle: inject production client CSS href and bootstrap script so HTML has styles and hydration works
-  const ssrIndexPath = path.join(serverDistDir, "ssr", "index.js");
-  const manifestPath = path.join(serverDistDir, "rsc", MANIFEST_FILENAME);
-  let bootstrapScriptContent = "";
-  let clientEntryHref = "";
-  const RSC_CALL_SERVER_PLACEHOLDER =
-    "(function(){if(typeof globalThis.__viteRscCallServer!=='function'){globalThis.__viteRscCallServer=function(){return Promise.reject(new Error(\"Farm.js: server actions not ready\"));}}})();\n";
-  if (existsSync(manifestPath)) {
-    try {
-      const manifestContent = readFileSync(manifestPath, "utf-8");
-      const start = manifestContent.indexOf("{");
-      const end = manifestContent.lastIndexOf("}") + 1;
-      if (start >= 0 && end > start) {
-        const manifest = JSON.parse(manifestContent.slice(start, end)) as {
-          bootstrapScriptContent?: string;
-        };
-        bootstrapScriptContent = manifest.bootstrapScriptContent || "";
-        const importMatch = bootstrapScriptContent.match(
-          /^import\s*\(\s*["']([^"']+)["']\s*\)\s*$/,
-        );
-        if (importMatch) clientEntryHref = importMatch[1];
-      }
-    } catch {
-      // ignore
-    }
-  }
-  const fullBootstrap = bootstrapScriptContent
-    ? RSC_CALL_SERVER_PLACEHOLDER + bootstrapScriptContent
-    : "";
-  // Patch manifest so production SSR gets bootstrap with __viteRscCallServer placeholder (SSR reads assetsManifest.bootstrapScriptContent)
-  if (fullBootstrap && existsSync(manifestPath)) {
-    try {
-      let manifestCode = readFileSync(manifestPath, "utf-8");
-      const escaped = JSON.stringify(bootstrapScriptContent);
-      const escapedFull = JSON.stringify(fullBootstrap);
-      if (manifestCode.includes(escaped) && escaped !== escapedFull) {
-        manifestCode = manifestCode.replace(escaped, escapedFull);
-        writeFileSync(manifestPath, manifestCode, "utf-8");
-      }
-    } catch {
-      // ignore
-    }
-  }
-  if (existsSync(ssrIndexPath)) {
-    const assetsDirName = assetsDir ?? "assets";
-    const assetsRoot = path.join(publicDir, assetsDirName);
-    let clientCssHref = "";
-    if (existsSync(assetsRoot)) {
-      const files = readdirSync(assetsRoot);
-      const cssFile = files.find((f) => f.endsWith(".css"));
-      if (cssFile) clientCssHref = `/${assetsDirName}/${cssFile}`;
-    }
-    try {
-      let ssrCode = readFileSync(ssrIndexPath, "utf-8");
-      if (ssrCode.includes("__FARM_CLIENT_CSS_HREF__")) {
-        ssrCode = ssrCode.replace("__FARM_CLIENT_CSS_HREF__", clientCssHref);
-      }
-      if (clientEntryHref && ssrCode.includes("__FARM_CLIENT_ENTRY_HREF__")) {
-        ssrCode = ssrCode.replace(
-          /(CLIENT_ENTRY_HREF\s*=\s*)"__FARM_CLIENT_ENTRY_HREF__"/,
-          "$1" + JSON.stringify(clientEntryHref),
-        );
-      }
-      if (fullBootstrap && ssrCode.includes("__FARM_BOOTSTRAP_SCRIPT__")) {
-        ssrCode = ssrCode.replace(
-          /=\s*["']__FARM_BOOTSTRAP_SCRIPT__["']/,
-          "= " + JSON.stringify(fullBootstrap),
-        );
-      }
-      writeFileSync(ssrIndexPath, ssrCode, "utf-8");
-    } catch {
-      // ignore
-    }
-  }
 
   console.log("[FARM] RSC Nitro build completed");
   console.log(`[FARM] Output: ${outputDir}`);

@@ -55,8 +55,10 @@ import { canonicalizeRequestPathname, canonicalizeRequestPathSegments } from "./
 import { stripFarmBasePath } from "./base-path";
 import { createFarmAPIMiddlewarePathnames, resolveFarmAPIServerBasePath } from "./api/server-path";
 import type { ResolvedFarmAPIConfig } from "./api/config";
+import { toPublicValidationIssues } from "./api/route-schema";
 import { resolveFarmLocalePath } from "./i18n/routing";
 import {
+  assertSupportedMiddlewareMatcher,
   compileMiddlewareConfig,
   matchesCompiledMiddlewareConfig,
   type CompiledMiddlewareConfig,
@@ -89,6 +91,7 @@ import {
   createFarmRequestBodyErrorResponse,
   readNodeRequestBody,
   resolveFarmServerConfig,
+  withFarmRequestClientAddress,
 } from "./server-http";
 
 export { api, defineIntegrationAPI, defineIntegrationAPIOperation } from "./integration-api";
@@ -1232,6 +1235,16 @@ export function resolveIntegrationPlugins(
       continue;
     }
 
+    for (const entry of integration.middleware || []) {
+      if (!entry.matcher) continue;
+      const matchers = Array.isArray(entry.matcher) ? entry.matcher : [entry.matcher];
+      try {
+        matchers.forEach(assertSupportedMiddlewareMatcher);
+      } catch (error) {
+        throw new Error(`Integration "${key}": ${(error as Error).message}`);
+      }
+    }
+
     const owner = createIntegrationPluginOwner(key, integration, "lifecycle");
     plugins.push(withIntegrationPluginOwner(createIntegrationPlugin(key, integration), owner));
     plugins.push(...resolveIntegrationPluginContributions(key, integration));
@@ -1982,7 +1995,11 @@ function createIntegrationPlugin(integrationKey: string, integration: FarmIntegr
 
       const createHandlerRequest = async (): Promise<Request | null> => {
         try {
-          return createWebRequest(req, fullUrl, await getRequestBody());
+          return withFarmRequestClientAddress(
+            createWebRequest(req, fullUrl, await getRequestBody()),
+            resolveFarmServerConfig(context.config.server).trustProxy,
+            req.socket?.remoteAddress,
+          );
         } catch (error) {
           const response = createFarmRequestBodyErrorResponse(error);
           if (!response) throw error;
@@ -2579,20 +2596,16 @@ function normalizeIntegrationValidationIssues(
   source: FarmIntegrationRouteInputSource,
   error: FarmIntegrationValidationErrorLike,
 ): FarmIntegrationValidationIssue[] {
+  // Like API routes, never echo validator messages, which can quote secrets.
   if (Array.isArray(error.issues) && error.issues.length > 0) {
-    return error.issues.map((issue) => ({
-      source,
-      path: normalizeIntegrationValidationPath(issue.path),
-      code: issue.code,
-      message: issue.message || "Invalid input",
-    }));
+    return toPublicValidationIssues(error).map((issue) => ({ source, ...issue }));
   }
 
   return [
     {
       source,
       path: [],
-      message: error.message || "Invalid input",
+      message: "Invalid input",
     },
   ];
 }
@@ -2877,18 +2890,21 @@ export async function dispatchIntegrationRequest(
      * at most once per request, as app middleware does.
      */
     ranMiddleware?: Set<object>;
+    /** The peer address the server adapter reports, used unless `server.trustProxy` applies. */
+    clientAddress?: string;
   } = {},
 ): Promise<Response | null> {
+  const serverConfig = resolveFarmServerConfig(runtime.config.server);
   try {
-    request = await bufferFarmRequestBody(
-      request,
-      resolveFarmServerConfig(runtime.config.server).bodySizeLimit,
-    );
+    request = await bufferFarmRequestBody(request, serverConfig.bodySizeLimit);
   } catch (error) {
     const response = createFarmRequestBodyErrorResponse(error);
     if (response) return response;
     throw error;
   }
+  // Handlers such as Farm Auth key rate limits on the caller, so they get the
+  // address Farm resolved rather than a client-supplied header.
+  request = withFarmRequestClientAddress(request, serverConfig.trustProxy, options.clientAddress);
 
   const integration = runtime.integration;
   const url = new URL(request.url);
@@ -3199,7 +3215,7 @@ export async function dispatchIntegrationRequests(
   integrations: FarmIntegrationsUserConfig | undefined,
   runtime: Omit<RegisteredIntegrationRuntime, "integration">,
   request: Request,
-  options: { currentRequest?: Request; ranMiddleware?: Set<object> } = {},
+  options: { currentRequest?: Request; ranMiddleware?: Set<object>; clientAddress?: string } = {},
 ): Promise<{ response: Response | null; setCookies: string[] }> {
   const setCookies: string[] = [];
   if (!integrations) {
@@ -3227,6 +3243,7 @@ export async function dispatchIntegrationRequests(
       {
         currentRequest: options.currentRequest,
         ranMiddleware: options.ranMiddleware,
+        clientAddress: options.clientAddress,
         onForwardedCookies: (cookies) => setCookies.push(...cookies),
       },
     );
@@ -3469,6 +3486,35 @@ function resolveIntegrationMiddlewareParams(
     if (result.matched) return result.params ?? {};
   }
   return null;
+}
+
+/**
+ * @internal Whether an integration's middleware matcher (a `protectedRoutes` guard, say)
+ * covers `pathname`, a route path without the base path. With `catchAllProbe`, a path no
+ * route uses, only matchers naming particular paths count: middleware without a matcher,
+ * or one that also meets the probe, covers every path and is left out.
+ */
+export function integrationMiddlewareMayHandlePath(
+  integrations: FarmIntegrationsUserConfig | undefined,
+  pathname: string,
+  catchAllProbe?: string,
+): boolean {
+  if (!integrations) return false;
+  const covers = (entry: { matcher?: string | readonly string[] }) =>
+    resolveIntegrationMiddlewareParams(entry, pathname, undefined) !== null;
+  return Object.values(integrations).some(
+    (integration) =>
+      isFarmIntegration(integration) &&
+      (integration.middleware || []).some((entry) => {
+        if (catchAllProbe === undefined) return covers(entry);
+        if (!entry.matcher) return false;
+        const specific = (Array.isArray(entry.matcher) ? entry.matcher : [entry.matcher]).filter(
+          (matcher: string) =>
+            resolveIntegrationMiddlewareParams({ matcher }, catchAllProbe, undefined) === null,
+        );
+        return specific.length > 0 && covers({ matcher: specific });
+      }),
+  );
 }
 
 /**

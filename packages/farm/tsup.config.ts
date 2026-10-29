@@ -1,6 +1,7 @@
 import path from "node:path";
 import { defineConfig, type Options } from "tsup";
 import { restoreDynamicImportsInDirectory } from "./scripts/restore-cjs-dynamic-imports";
+import { writeReactServerClientEntry } from "./scripts/write-react-server-client";
 
 const entry = {
   index: "src/index.ts",
@@ -24,7 +25,7 @@ const entry = {
   router: "src/router.ts",
   routes: "src/routes.ts",
   request: "src/request.ts",
-  plugin: "src/plugin.ts",
+  plugin: "src/plugin-entry.ts",
   integrations: "src/integrations.ts",
   schema: "src/schema.ts",
   storage: "src/storage/index.ts",
@@ -131,6 +132,7 @@ export const farmPackageBuildOptions = {
   // Splitting converts CommonJS dynamic imports to require(); restore import().
   async onSuccess() {
     await restoreDynamicImportsInDirectory(path.join(process.cwd(), "dist"));
+    await writeReactServerClientEntry(path.join(process.cwd(), "dist"));
   },
 } satisfies Options;
 

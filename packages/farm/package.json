@@ -1,6 +1,6 @@
 {
   "name": "@farm.js/core",
-  "version": "0.1.36",
+  "version": "0.1.40",
   "description": "The core of Farm.js, the framework for the web and agents",
   "keywords": [
     "@farm.js/core",
@@ -306,6 +306,7 @@
     },
     "./client": {
       "types": "./types/client.d.ts",
+      "react-server": "./dist/client.react-server.mjs",
       "import": "./dist/client.mjs",
       "require": "./dist/client.cjs"
     },
@@ -700,6 +701,7 @@
     "@jridgewell/trace-mapping": "0.3.31",
     "@mdx-js/mdx": "^3.1.1",
     "@opentelemetry/api": "1.9.1",
+    "@vitejs/plugin-react": "6.1.2",
     "better-call": "^1.0.19",
     "db0": "^0.3.4",
     "es-module-lexer": "2.0.0",
