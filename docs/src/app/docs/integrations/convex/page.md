@@ -167,9 +167,9 @@ A service whose `home` is `"farm"` is never detected. Every helper is exported f
 | Extension                                         | Convex component             | What Farm adds                                                               |
 | ------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
 | `betterAuth()` from `@farm.js/convex/better-auth` | `@convex-dev/better-auth`    | `/api/auth/*` on your domain, the visitor's token, the browser provider      |
-| `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`          | Owns billing; optional webhook route forwarded to `/polar/events`            |
-| `stripe()` from `@farm.js/convex/stripe`          | `@convex-dev/stripe`         | Owns billing; optional webhook route forwarded to `/stripe/webhook`          |
-| `autumn()` from `@farm.js/convex/autumn`          | `@useautumn/convex`          | Owns billing                                                                 |
+| `polar()` from `@farm.js/convex/polar`            | `@convex-dev/polar`          | Billing; optional webhook route forwarded to `/polar/events`                 |
+| `stripe()` from `@farm.js/convex/stripe`          | `@convex-dev/stripe`         | Billing; optional webhook route forwarded to `/stripe/webhook`               |
+| `autumn()` from `@farm.js/convex/autumn`          | `@useautumn/convex`          | Billing                                                                      |
 | `resend()` from `@farm.js/convex/resend`          | `@convex-dev/resend`         | Optional webhook route forwarded to `/resend-webhook`                        |
 | `workosAuthKit()` from `@farm.js/convex/workos`   | `@convex-dev/workos-authkit` | Optional webhook route forwarded to `/workos/webhook`; works with `workos()` |
 | `component(name, options)` from `@farm.js/convex` | Any component                | Whatever you pass: routes, ownership, token, provider                        |
@@ -302,9 +302,8 @@ that code runs on Convex.
 | Option     | Use                                                                                    |
 | ---------- | -------------------------------------------------------------------------------------- |
 | `routes`   | `{ "/path/on/your/domain": "/path/on/convex" }`, or full route objects with `methods`. |
-| `owns`     | `"auth"` or `"billing"` when the component owns that service.                          |
 | `name`     | Shown in errors and warnings. Defaults to the package name.                            |
-| `token`    | Reads the visitor's Convex token on the server.                                        |
+| `token`    | Reads the visitor's Convex token on the server. The component then counts as auth.     |
 | `provider` | A browser provider used instead of the default one.                                    |
 
 ### Write your own extension
@@ -324,14 +323,14 @@ export function resend(): ConvexExtension {
 }
 ```
 
-| Field       | Use                                                                                |
-| ----------- | ---------------------------------------------------------------------------------- |
-| `name`      | Shown in errors and warnings.                                                      |
-| `owns`      | `"auth"` or `"billing"`: the service Convex owns through this extension.           |
-| `component` | The component it needs in `convex.config.ts`. Farm warns when it is missing.       |
-| `routes`    | Paths on your domain forwarded to the Convex site URL. `to` sets the Convex path.  |
-| `token`     | Reads the visitor's Convex token on the server. Only one extension can set it.     |
-| `provider`  | A browser provider used instead of the default one. Only one extension can set it. |
+| Field       | Use                                                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `name`      | Shown in errors and warnings.                                                                                           |
+| `service`   | `"auth"` or `"billing"`, for the check that the service is not also set up in Farm. A `token` or `provider` means auth. |
+| `component` | The component it needs in `convex.config.ts`. Farm warns when it is missing.                                            |
+| `routes`    | Paths on your domain forwarded to the Convex site URL. `to` sets the Convex path.                                       |
+| `token`     | Reads the visitor's Convex token on the server. Only one extension can set it.                                          |
+| `provider`  | A browser provider used instead of the default one. Only one extension can set it.                                      |
 
 A `token` or `provider` passed to `convex()` directly wins over an extension's.
 

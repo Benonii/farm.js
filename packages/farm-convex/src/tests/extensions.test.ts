@@ -50,9 +50,9 @@ describe("convex({ use })", () => {
   });
 
   it("refuses two extensions that own the same service", () => {
-    const other: ConvexExtension = { name: "other-auth", owns: "auth" };
+    const other: ConvexExtension = { name: "other-auth", service: "auth" };
     expect(() => convex({ url, dev: false, use: [betterAuth(), other] })).toThrow(
-      /better-auth and other-auth both own auth/,
+      /better-auth and other-auth both provide auth/,
     );
   });
 
@@ -122,22 +122,27 @@ describe("component()", () => {
     ]);
   });
 
-  it("passes ownership, a name, full routes, and a token reader through", () => {
+  it("passes a name, full routes, and a token reader through", () => {
     const token = () => "token";
-    const stripe = component("@convex-dev/stripe", {
-      name: "stripe",
-      owns: "billing",
+    const sso = component("@acme/convex-sso", {
+      name: "sso",
       token,
-      routes: [{ path: "/api/webhooks/stripe", methods: ["POST"], to: "/stripe/webhook" }],
+      routes: [{ path: "/api/sso/callback", methods: ["GET"], to: "/sso/callback" }],
     });
-    expect(stripe).toMatchObject({
-      name: "stripe",
-      owns: "billing",
-      component: "@convex-dev/stripe",
-      token,
-    });
-    expect(() => convex({ url, dev: false, use: [polar(), stripe] })).toThrow(
-      /polar and stripe both own billing/,
+    expect(sso).toMatchObject({ name: "sso", component: "@acme/convex-sso", token });
+    expect(sso.routes).toEqual([
+      { path: "/api/sso/callback", methods: ["GET"], to: "/sso/callback" },
+    ]);
+  });
+
+  it("treats a component that signs visitors in as auth", () => {
+    const sso = component("@acme/convex-sso", { token: () => "token" });
+    const magicLink: ConvexExtension = { name: "magic-link", service: "auth" };
+    expect(() => convex({ url, dev: false, use: [sso, magicLink] })).toThrow(
+      /@acme\/convex-sso and magic-link both provide auth/,
+    );
+    expect(() => convex({ url, dev: false, use: [polar(), stripe()] })).toThrow(
+      /polar and stripe both provide billing/,
     );
   });
 
@@ -171,8 +176,13 @@ describe("service helpers", () => {
     ["workosAuthKit", workosAuthKit, "@convex-dev/workos-authkit", "auth", "/workos/webhook"],
   ] as const)(
     "%s forwards webhooks to the component's default path",
-    (name, helper, pkg, owns, to) => {
-      expect(helper()).toMatchObject({ name, component: pkg, owns, routes: [] });
+    (name, helper, pkg, service, to) => {
+      expect(helper()).toEqual({
+        name,
+        component: pkg,
+        routes: [],
+        ...(service ? { service } : {}),
+      });
       expect(helper({ webhooks: "/api/webhooks/x" }).routes).toEqual([
         { path: "/api/webhooks/x", methods: ["POST"], to },
       ]);
@@ -187,7 +197,7 @@ describe("service helpers", () => {
   it("autumn marks billing as Convex-owned with nothing to forward", () => {
     expect(autumn()).toEqual({
       name: "autumn",
-      owns: "billing",
+      service: "billing",
       component: "@useautumn/convex",
       routes: [],
     });

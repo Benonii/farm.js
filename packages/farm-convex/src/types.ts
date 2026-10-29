@@ -50,8 +50,11 @@ export interface ConvexExtensionRoute {
 /** A service that lives in Convex, such as auth or billing, wired into Farm by convex({ use }). */
 export interface ConvexExtension {
   name: string;
-  /** The service Convex owns through this extension. Only one extension can own each service. */
-  owns?: ConvexService;
+  /**
+   * What kind of service the component is, for the check that it is not also set up in Farm.
+   * An extension with a token or provider counts as auth.
+   */
+  service?: ConvexService;
   /** The Convex component it needs in convex.config.ts, such as "@convex-dev/polar". */
   component?: string;
   routes?: readonly ConvexExtensionRoute[];
@@ -138,7 +141,7 @@ export interface ConvexWebhookOptions {
 export interface ConvexWebhookService {
   name: string;
   component: string;
-  owns?: ConvexService;
+  service?: ConvexService;
   defaultConvexPath: string;
   defaultWebhookPath: string;
 }

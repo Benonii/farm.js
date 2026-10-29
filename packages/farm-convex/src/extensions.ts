@@ -1,3 +1,4 @@
+import { readExtensionService } from "./component.js";
 import { forwardRequest } from "./forward.js";
 
 import type { FarmIntegrationRoute } from "@farm.js/core";
@@ -20,13 +21,16 @@ function checkSingleOwner(extensions: readonly ConvexExtension[], key: "token" |
 
 function checkServiceOwners(extensions: readonly ConvexExtension[]): void {
   const owners = new Map<string, string>();
-  for (const { name, owns } of extensions) {
-    if (!owns) continue;
-    const owner = owners.get(owns);
-    if (owner) {
-      throw new Error(`Convex integration: ${owner} and ${name} both own ${owns}. Keep one.`);
+  for (const extension of extensions) {
+    const service = readExtensionService(extension);
+    if (!service) continue;
+    const other = owners.get(service);
+    if (other) {
+      throw new Error(
+        `Convex integration: ${other} and ${extension.name} both provide ${service}. Keep one.`,
+      );
     }
-    owners.set(owns, name);
+    owners.set(service, extension.name);
   }
 }
 
@@ -45,9 +49,9 @@ function checkRoutePaths(extensions: readonly ConvexExtension[]): void {
 }
 
 export function checkExtensions(extensions: readonly ConvexExtension[]): void {
-  checkServiceOwners(extensions);
   checkSingleOwner(extensions, "token");
   checkSingleOwner(extensions, "provider");
+  checkServiceOwners(extensions);
   checkRoutePaths(extensions);
 }
 

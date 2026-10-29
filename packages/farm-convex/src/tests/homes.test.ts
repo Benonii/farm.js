@@ -102,7 +102,7 @@ describe("checkServiceHomes", () => {
     warn.mockRestore();
   });
 
-  it("stops when an extension owns a service that a Farm integration also provides", () => {
+  it("stops when an extension provides a service that a Farm integration also provides", () => {
     const root = createAppRoot();
     const integrations = { auth: { type: "better-auth" } };
     expect(() => checkServiceHomes({ root, integrations }, "convex", {}, [betterAuth()])).toThrow(

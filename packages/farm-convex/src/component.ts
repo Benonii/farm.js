@@ -1,5 +1,5 @@
 import type { ConvexComponentOptions, ConvexExtension, ConvexExtensionRoute } from "./types.js";
-import type { ConvexWebhookOptions, ConvexWebhookService } from "./types.js";
+import type { ConvexService, ConvexWebhookOptions, ConvexWebhookService } from "./types.js";
 
 function toRoutes(routes: ConvexComponentOptions["routes"]): readonly ConvexExtensionRoute[] {
   if (!routes) return [];
@@ -28,9 +28,15 @@ export function webhookComponent(
 ): ConvexExtension {
   const to = options.convexPath ?? service.defaultConvexPath;
   const path = options.webhooks === true ? service.defaultWebhookPath : options.webhooks;
-  return component(service.component, {
+  const extension = component(service.component, {
     name: service.name,
-    owns: service.owns,
     routes: path ? [{ path, methods: ["POST"], to }] : [],
   });
+  return service.service ? { ...extension, service: service.service } : extension;
+}
+
+/** The kind of service an extension provides; sign-in (a token or provider) means auth. */
+export function readExtensionService(extension: ConvexExtension): ConvexService | undefined {
+  if (extension.service) return extension.service;
+  return extension.token || extension.provider ? "auth" : undefined;
 }

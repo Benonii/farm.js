@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { readExtensionService } from "./component.js";
 import { CONVEX_COMPONENT_SERVICES, CONVEX_PAIRS } from "./pairs.js";
 import { FARM_BUILT_IN_AUTH, FARM_INTEGRATION_SERVICES } from "./pairs.js";
 
@@ -32,13 +33,15 @@ export function findConvexComponents(source: string): ConvexServiceSetup[] {
     .map((name) => ({ service: CONVEX_COMPONENT_SERVICES[name], side: "convex", name }));
 }
 
-// An extension that owns a service counts even before its component is installed.
+// An extension's service counts even before its component is installed.
 export function findExtensionServices(
   extensions: readonly ConvexExtension[],
 ): ConvexServiceSetup[] {
-  return extensions.flatMap(({ name, owns, component }) =>
-    owns ? [{ service: owns, side: "convex", name: component ?? name }] : [],
-  );
+  return extensions.flatMap((extension) => {
+    const service = readExtensionService(extension);
+    const name = extension.component ?? extension.name;
+    return service ? [{ service, side: "convex", name }] : [];
+  });
 }
 
 function mergeConvexServices(

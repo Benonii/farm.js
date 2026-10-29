@@ -45,7 +45,7 @@ export async function fetchBetterAuthToken(
 export function betterAuth(): ConvexExtension {
   return {
     name: "better-auth",
-    owns: "auth",
+    service: "auth",
     component: "@convex-dev/better-auth",
     routes: [{ path: "/api/auth/[...auth]" }],
     token: (request) => fetchBetterAuthToken(request, requireSiteURL()),
